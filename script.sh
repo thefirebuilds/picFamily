@@ -1,6 +1,16 @@
 #!/bin/bash
 echo  "Preparing PicFamily"
-sleep 90
+# Wait for a valid IP address (not 127.0.0.1)
+until [[ "$(hostname -I)" != "127.0.0.1" ]]; do
+    sleep 1
+done
+
+# Wait until internet is available by pinging an external server (e.g., Google's DNS)
+until ping -c 1 8.8.8.8 &>/dev/null; do
+    sleep 1
+done
+
+echo "IP assigned and internet is available!"
 
 until [ -e /dev/fb0 ]; do
     echo "Waiting for framebuffer device..." >> /home/pi/fbi_debug.log
