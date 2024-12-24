@@ -31,7 +31,11 @@ echo "loading:  /home/pi/$currentPic"
 pkill fim
 clear > /dev/fb0
 
-setterm -cursor off
-sleep 1
-sudo fim --no-cursor -A -q -T 1 -d /dev/fb0 "/home/pi/$currentPic" > fim_log.txt 2>&1 && exit  
-setterm -cursor on
+# Hide the cursor
+echo -e '\033[?25l' > /dev/tty0
+
+# Display the image
+sudo fim -A -q -T 1 -d /dev/fb0 "/home/pi/$currentPic" > fim_log.txt 2>&1
+
+# Restore the cursor
+echo -e '\033[?25h' > /dev/tty0
