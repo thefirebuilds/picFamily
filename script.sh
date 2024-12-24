@@ -3,10 +3,10 @@ echo  "Preparing PicFamily"
 sleep 90
 
 until [ -e /dev/fb0 ]; do
-	echo "Waiting for framebuffer device..." >> /home/pi/fbi_debug.log
-	sleep 1
+    echo "Waiting for framebuffer device..." >> /home/pi/fbi_debug.log
+    sleep 1
 done
-echo "/dev/fb0 ready" >> /home/fbi/fbi_debug.log
+echo "/dev/fb0 ready" >> /home/pi/fbi_debug.log
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export TERM=xterm
@@ -33,5 +33,5 @@ clear > /dev/fb0
 
 setterm -cursor off
 sleep 1
-sudo fim -A -q -T 1 -d /dev/fb0 "/home/pi/$currentPic" > fim_log.txt 2>&1 && exit  
+sudo fim --no-cursor -A -q -T 1 -d /dev/fb0 "/home/pi/$currentPic" > fim_log.txt 2>&1 && exit  
 setterm -cursor on
