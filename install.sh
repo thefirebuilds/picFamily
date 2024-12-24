@@ -46,7 +46,7 @@ chmod +x /home/pi/scripts/script.sh /home/pi/scripts/cleanup.sh
 # Step 8: Add crontab entries
 echo "Adding crontab entries..."
 (crontab -l 2>/dev/null; echo "@reboot /usr/bin/bash /home/pi/scripts/script.sh >> /home/pi/scripts/cron_output.log 2>&1") | crontab - 
-(crontab -l 2>/dev/null; echo "5 * * * * /home/pi/scripts/cleanup.sh") | crontab - 
+(crontab -l 2>/dev/null; echo "0 3 * * 0 /home/pi/scripts/cleanup.sh") | crontab -
 
 # Step 9: Reboot the system
 echo "Rebooting the system..."
