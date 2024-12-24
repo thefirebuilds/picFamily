@@ -44,9 +44,41 @@ chmod +x /home/pi/scripts/script.sh
 
 # Step 8: Add crontab entries
 echo "Adding crontab entries..."
-(crontab -l 2>/dev/null; echo "@reboot /usr/bin/bash /home/pi/scripts/script.sh >> /home/pi/scripts/cron_output.log 2>&1") | crontab -
-(crontab -l 2>/dev/null; echo "5 * * * * /home/pi/scripts/script.sh") | crontab -
+(crontab -l 2>/dev/null; echo "@reboot /usr/bin/bash /home/pi/scripts/script.sh >> /home/pi/scripts/cron_output.log 2>&1") | crontab - 
+(crontab -l 2>/dev/null; echo "5 * * * * /home/pi/scripts/script.sh") | crontab - 
 
-# Step 2: Reboot the system
+# Step 9: Disable unwanted services
+
+# Disable Bluetooth
+echo "Disabling Bluetooth..."
+sudo systemctl disable bluetooth.service
+sudo systemctl stop bluetooth.service
+
+# Disable Camera
+echo "Disabling Camera..."
+sudo raspi-config nonint do_camera 0
+
+# Disable GUI (LightDM or other display manager)
+echo "Disabling GUI..."
+sudo systemctl set-default multi-user.target
+sudo systemctl disable lightdm.service
+sudo systemctl stop lightdm.service
+
+# Disable alsa-restore.service
+echo "Disabling alsa-restore.service..."
+sudo systemctl disable alsa-restore.service
+sudo systemctl stop alsa-restore.service
+
+# Disable modemmanager.service
+echo "Disabling modemmanager.service..."
+sudo systemctl disable modemmanager.service
+sudo systemctl stop modemmanager.service
+
+# Disable rpc-statd-notify.service
+echo "Disabling rpc-statd-notify.service..."
+sudo systemctl disable rpc-statd-notify.service
+sudo systemctl stop rpc-statd-notify.service
+
+# Step 10: Reboot the system
 echo "Rebooting the system..."
 sudo reboot now
