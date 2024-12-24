@@ -49,9 +49,9 @@ echo "Adding crontab entries..."
 (crontab -l 2>/dev/null; echo "0 3 * * 0 /home/pi/scripts/cleanup.sh") | crontab -
 (crontab -l 2>/dev/null; echo "0 4 * * 0 sudo reboot") | crontab -
 
-# Step 9: Download script.sh on first boot
+# Step 9: Download script.sh on first boot after network connection is established
 echo "Creating script to download script.sh on first boot..."
-echo -e "#!/bin/bash\nwget -O /home/pi/scripts/script.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/script.sh" | sudo tee /etc/init.d/download_script.sh > /dev/null
+echo -e "#!/bin/bash\nuntil ip addr show | grep -q \"inet\" && ping -c 1 google.com &>/dev/null; do\n  echo \"Waiting for network...\"\n  sleep 5\ndone\nwget -O /home/pi/scripts/script.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/script.sh" | sudo tee /etc/init.d/download_script.sh > /dev/null
 sudo chmod +x /etc/init.d/download_script.sh
 sudo update-rc.d download_script.sh defaults
 
