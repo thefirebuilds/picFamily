@@ -1,5 +1,10 @@
 #!/bin/bash
 echo  "Preparing PicFamily"
+
+# Sync time with an NTP server
+echo "Syncing time with an NTP server..."
+sudo ntpdate -s time.google.com
+
 # Wait for a valid IP address (not 127.0.0.1)
 until [[ "$(hostname -I)" != "127.0.0.1" ]]; do
     sleep 1
@@ -23,7 +28,7 @@ export TERM=xterm
 
 URI="http://192.168.86.167:3000"
 
-echo "fetching data from $URI"
+echo "Fetching data from $URI"
 
 currentPic=$(curl -s "$URI/settings" | json currentPic)
 echo "$currentPic"
@@ -35,9 +40,9 @@ echo "$fullPath"
 wget -q -O "/home/pi/$currentPic" "$fullPath"
 sleep 5
 
-echo "loading:  /home/pi/$currentPic"
+echo "Loading:  /home/pi/$currentPic"
 
-#clear fim buffers
+# Clear FIM buffers
 pkill fim
 clear > /dev/fb0
 
