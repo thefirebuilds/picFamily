@@ -22,6 +22,7 @@ until [ -e /dev/fb0 ]; do
     sleep 1
 done
 echo "/dev/fb0 ready" >> /home/pi/fbi_debug.log
+sleep 5
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export TERM=xterm
