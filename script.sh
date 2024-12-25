@@ -42,10 +42,10 @@ pkill fim
 clear > /dev/fb0
 
 # Hide the cursor
-echo -e '\033[?25l' > /dev/tty0
+echo 0 | sudo tee /sys/class/graphics/fbcon/cursor_blink
 
 # Display the image
 sudo fim -A -q -T 1 -d /dev/fb0 "/home/pi/$currentPic" > fim_log.txt 2>&1
 
 # Restore the cursor
-echo -e '\033[?25h' > /dev/tty0
+echo 0 | sudo tee /sys/class/graphics/fbcon/cursor_blink
