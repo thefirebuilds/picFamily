@@ -45,16 +45,12 @@ chmod +x /home/pi/scripts/script.sh /home/pi/scripts/cleanup.sh
 
 # Step 8: Add crontab entries
 echo "Adding crontab entries..."
-(crontab -l 2>/dev/null; echo "@reboot /usr/bin/bash /home/pi/scripts/script.sh >> /home/pi/scripts/cron_output.log 2>&1") | crontab - 
+(crontab -l 2>/dev/null; echo "@reboot /bin/bash -c 'until ping -c 1 google.com; do sleep 1; done; wget -O /home/pi/scripts/script.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/script.sh'") | crontab -
+(crontab -l 2>/dev/null; echo "@reboot /home/pi/scripts/script.sh") | crontab -
+(crontab -l 2>/dev/null; echo "0 * * * * /home/pi/scripts/script.sh") | crontab -
 (crontab -l 2>/dev/null; echo "0 3 * * 0 /home/pi/scripts/cleanup.sh") | crontab -
 (crontab -l 2>/dev/null; echo "0 4 * * 0 sudo reboot") | crontab -
 
-# Step 9: Download script.sh on first boot after network connection is established
-echo "Creating script to download script.sh on first boot..."
-echo -e "#!/bin/bash\nuntil ip addr show | grep -q \"inet\" && ping -c 1 google.com &>/dev/null; do\n  echo \"Waiting for network...\"\n  sleep 5\ndone\nwget -O /home/pi/scripts/script.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/script.sh" | sudo tee /etc/init.d/download_script.sh > /dev/null
-sudo chmod +x /etc/init.d/download_script.sh
-sudo update-rc.d download_script.sh defaults
-
-# Step 10: Reboot the system
+# Step 9: Reboot the system
 echo "Rebooting the system..."
 sudo reboot now
