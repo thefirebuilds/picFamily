@@ -27,7 +27,12 @@ sleep 5
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export TERM=xterm
 
-URI="http://192.168.86.167:3000"
+# Check if the external IP is reachable
+if ping -c 1 184.92.108.105 &>/dev/null; then
+    URI="http://184.92.108.105:3000"
+else
+    URI="http://192.168.86.167:3000"
+fi
 
 echo "Fetching data from $URI"
 
