@@ -42,8 +42,8 @@ retry_command 5 ping -c 1 8.8.8.8 &>/dev/null || {
 log_message "Internet is available!"
 
 # Sync time with an NTP server
-log_message "Syncing time with an NTP server..."
-retry_command 5 sudo ntpdate -s time.google.com || log_message "Failed to sync time."
+log_message "Syncing time with systemd-timesyncd..."
+retry_command 5 sudo timedatectl set-ntp true || log_message "Failed to enable NTP synchronization."
 
 # Wait for framebuffer device
 until [ -e /dev/fb0 ]; do
