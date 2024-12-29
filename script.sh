@@ -30,7 +30,8 @@ while true; do
         log_message "Valid IP address assigned: $assigned_ip"
         break
     fi
-    sleep 1
+    log_message "No valid IP address assigned yet. Retrying..."
+    sleep 5
 done
 
 # Wait until internet is available by pinging an external server
