@@ -32,16 +32,16 @@ until [[ "$(hostname -I)" != "127.0.0.1" ]]; do
 done
 log_message "Valid IP address assigned: $(hostname -I)"
 
-# Sync time with an NTP server
-log_message "Syncing time with an NTP server..."
-retry_command 5 sudo ntpdate -s time.google.com || log_message "Failed to sync time."
-
 # Wait until internet is available by pinging an external server
 retry_command 5 ping -c 1 8.8.8.8 &>/dev/null || {
     log_message "Internet connection not available. Exiting."
     exit 1
 }
 log_message "Internet is available!"
+
+# Sync time with an NTP server
+log_message "Syncing time with an NTP server..."
+retry_command 5 sudo ntpdate -s time.google.com || log_message "Failed to sync time."
 
 # Wait for framebuffer device
 until [ -e /dev/fb0 ]; do
@@ -78,25 +78,29 @@ fi
 log_message "Received 'currentPic': $currentPic"
 
 fullPath="$URI/images/$currentPic"
-log_message "Full image path: $fullPath"
+localImagePath="/home/pi/$currentPic"
 
-# Download the image
-log_message "Downloading image..."
-retry_command 5 wget -q -O "/home/pi/$currentPic" "$fullPath" || {
-    log_message "Failed to download image. Exiting."
-    exit 1
-}
-log_message "Image downloaded successfully: /home/pi/$currentPic"
+# Check if the image already exists locally
+if [[ -f "$localImagePath" ]]; then
+    log_message "Image already exists locally: $localImagePath. Skipping download."
+else
+    log_message "Image not found locally. Downloading image..."
+    retry_command 5 wget -q -O "$localImagePath" "$fullPath" || {
+        log_message "Failed to download image. Exiting."
+        exit 1
+    }
+    log_message "Image downloaded successfully: $localImagePath"
+fi
 
 # Display the image
-log_message "Displaying image: /home/pi/$currentPic"
+log_message "Displaying image: $localImagePath"
 pkill fim
 clear > /dev/fb0
 
 # Hide the cursor
 echo 0 | sudo tee /sys/class/graphics/fbcon/cursor_blink &>/dev/null
 
-if sudo fim -A -q -T 1 -d /dev/fb0 "/home/pi/$currentPic" > fim_log.txt 2>&1; then
+if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > fim_log.txt 2>&1; then
     log_message "Image displayed successfully."
 else
     log_message "Error: Failed to display image with FIM."
