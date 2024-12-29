@@ -22,15 +22,16 @@ retry_command() {
     return 0
 }
 
-echo "Preparing PicFamily"
-log_message "Script started."
-
 # Wait for a valid IP address (not 127.0.0.1)
 log_message "Waiting for a valid IP address..."
-until [[ "$(hostname -I)" != "127.0.0.1" ]]; do
+while true; do
+    assigned_ip=$(hostname -I | awk '{print $1}')
+    if [[ "$assigned_ip" != "127.0.0.1" && -n "$assigned_ip" ]]; then
+        log_message "Valid IP address assigned: $assigned_ip"
+        break
+    fi
     sleep 1
 done
-log_message "Valid IP address assigned: $(hostname -I)"
 
 # Wait until internet is available by pinging an external server
 retry_command 5 ping -c 1 8.8.8.8 &>/dev/null || {
