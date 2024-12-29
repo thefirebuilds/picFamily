@@ -25,21 +25,23 @@ retry_command() {
 echo "Preparing PicFamily"
 log_message "Script started."
 
-# Sync time with an NTP server
-log_message "Syncing time with an NTP server..."
-retry_command 5 sudo ntpdate -s time.google.com || log_message "Failed to sync time."
-
 # Wait for a valid IP address (not 127.0.0.1)
+log_message "Waiting for a valid IP address..."
 until [[ "$(hostname -I)" != "127.0.0.1" ]]; do
     sleep 1
 done
+log_message "Valid IP address assigned: $(hostname -I)"
+
+# Sync time with an NTP server
+log_message "Syncing time with an NTP server..."
+retry_command 5 sudo ntpdate -s time.google.com || log_message "Failed to sync time."
 
 # Wait until internet is available by pinging an external server
 retry_command 5 ping -c 1 8.8.8.8 &>/dev/null || {
     log_message "Internet connection not available. Exiting."
     exit 1
 }
-log_message "IP assigned and internet is available!"
+log_message "Internet is available!"
 
 # Wait for framebuffer device
 until [ -e /dev/fb0 ]; do
