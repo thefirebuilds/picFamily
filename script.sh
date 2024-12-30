@@ -109,10 +109,26 @@ clear > /dev/fb0
 # Hide the cursor
 echo 0 | sudo tee /sys/class/graphics/fbcon/cursor_blink &>/dev/null
 
-if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > fim_log.txt 2>&1; then
-    log_message "Image displayed successfully."
-else
-    log_message "Error: Failed to display image with FIM."
+#attempt to display the image
+max_attempts=5
+attempt=1
+
+while (( attempt <= max_attempts )); do
+    log_message "Attempting to display image: $localImagePath (Attempt $attempt/$max_attempts)"
+    pkill fim 2>/dev/null
+    clear > /dev/fb0
+    if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > fim_log.txt 2>&1; then
+        log_message "Image displayed successfully."
+        break
+    else
+        log_message "Error: Failed to display image with FIM on attempt $attempt."
+        ((attempt++))
+        sleep 2
+    fi
+done
+
+if (( attempt > max_attempts )); then
+    log_message "Error: Failed to display image after $max_attempts attempts. Exiting."
     exit 1
 fi
 
