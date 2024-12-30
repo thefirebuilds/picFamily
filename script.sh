@@ -56,13 +56,20 @@ sleep 5
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export TERM=xterm
 
-# Check if the external IP is reachable
-if retry_command 5 ping -c 1 184.92.108.105 &>/dev/null; then
-    URI="http://184.92.108.105:3000"
-    log_message "Using external server at $URI."
-else
+# Determine the server URI
+log_message "Checking connectivity to internal server..."
+if retry_command 5 curl -s -o /dev/null -w "%{http_code}" http://192.168.86.167:3000/settings | grep -q "200"; then
     URI="http://192.168.86.167:3000"
     log_message "Using internal server at $URI."
+else
+    log_message "Internal server not reachable. Checking external server..."
+    if retry_command 5 curl -s -o /dev/null -w "%{http_code}" http://184.92.108.105:3000/settings | grep -q "200"; then
+        URI="http://184.92.108.105:3000"
+        log_message "Using external server at $URI."
+    else
+        log_message "Failed to connect to both internal and external servers. Exiting."
+        exit 1
+    fi
 fi
 
 # Fetch data from server
