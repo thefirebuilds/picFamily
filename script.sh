@@ -101,11 +101,6 @@ else
     log_message "Image downloaded successfully: $localImagePath"
 fi
 
-# Display the image
-log_message "Displaying image: $localImagePath"
-pkill fim
-clear > /dev/fb0
-
 # Hide the cursor
 echo 0 | sudo tee /sys/class/graphics/fbcon/cursor_blink &>/dev/null
 
@@ -117,6 +112,7 @@ while (( attempt <= max_attempts )); do
     log_message "Attempting to display image: $localImagePath (Attempt $attempt/$max_attempts)"
     pkill fim 2>/dev/null
     clear > /dev/fb0
+    sleep 1
     if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > fim_log.txt 2>&1; then
         log_message "Image displayed successfully."
         break
