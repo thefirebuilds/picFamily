@@ -114,7 +114,7 @@ while (( attempt <= max_attempts )); do
     clear > /dev/fb0
     sleep 1
     if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > fim_log.txt 2>&1; then
-        log_message "Image displayed successfully."
+        log_message "Image $localImagePath displayed successfully."
         exit 0
     else
         log_message "Error: Failed to display image with FIM on attempt $attempt."
