@@ -111,23 +111,28 @@ attempt=1
 while (( attempt <= max_attempts )); do
     log_message "Attempting to display image: $localImagePath (Attempt $attempt/$max_attempts)"
 
-    # Ensure no FIM instances are running
-    fim_pids=$(pgrep fim)
-    if [[ -n "$fim_pids" ]]; then
-        log_message "FIM processes detected: $fim_pids. Attempting to kill..."
-        sudo pkill fim
+# Ensure no FIM instances are running
+fim_pids=$(pgrep fim)
+if [[ -n "$fim_pids" ]]; then
+    log_message "FIM processes detected: $fim_pids. Attempting to kill..."
+    for pid in $fim_pids; do
+        log_message "Sending SIGTERM to FIM process: $pid"
+        kill "$pid"
         sleep 2
-
-        # Verify if FIM was successfully killed
-        fim_pids_after=$(pgrep fim)
-        if [[ -n "$fim_pids_after" ]]; then
-            log_message "Error: Failed to stop FIM processes: $fim_pids_after"
-        else
-            log_message "Successfully killed FIM processes."
+        if kill -0 "$pid" &>/dev/null; then
+            log_message "FIM process $pid did not terminate. Sending SIGKILL..."
+            kill -9 "$pid"
+            sleep 1
         fi
-    else
-        log_message "No FIM processes detected."
-    fi
+        if kill -0 "$pid" &>/dev/null; then
+            log_message "Error: Failed to stop FIM process: $pid"
+        else
+            log_message "FIM process $pid terminated successfully."
+        fi
+    done
+else
+    log_message "No active FIM processes detected."
+fi
 
     clear > /dev/fb0
     sleep 1
