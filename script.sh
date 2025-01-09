@@ -110,9 +110,17 @@ attempt=1
 
 while (( attempt <= max_attempts )); do
     log_message "Attempting to display image: $localImagePath (Attempt $attempt/$max_attempts)"
-    sudo pkill fim 2>/dev/null
+    # Ensure no FIM instances are running
+    if pgrep fim > /dev/null; then
+        log_message "FIM process detected. Killing it before restarting."
+        sudo pkill fim
+        sleep 2
+    fi
+
     clear > /dev/fb0
     sleep 1
+
+    # Start FIM
     if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > fim_log.txt 2>&1; then
         log_message "Image $localImagePath displayed successfully."
         exit 0
