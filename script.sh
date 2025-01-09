@@ -110,7 +110,7 @@ attempt=1
 
 while (( attempt <= max_attempts )); do
     log_message "Attempting to display image: $localImagePath (Attempt $attempt/$max_attempts)"
-    pkill fim 2>/dev/null
+    sudo pkill fim 2>/dev/null
     clear > /dev/fb0
     sleep 1
     if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > fim_log.txt 2>&1; then
