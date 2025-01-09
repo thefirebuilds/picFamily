@@ -110,17 +110,30 @@ attempt=1
 
 while (( attempt <= max_attempts )); do
     log_message "Attempting to display image: $localImagePath (Attempt $attempt/$max_attempts)"
+
     # Ensure no FIM instances are running
-    if pgrep fim > /dev/null; then
-        log_message "FIM process detected. Killing it before restarting."
+    fim_pids=$(pgrep fim)
+    if [[ -n "$fim_pids" ]]; then
+        log_message "FIM processes detected: $fim_pids. Attempting to kill..."
         sudo pkill fim
         sleep 2
+
+        # Verify if FIM was successfully killed
+        fim_pids_after=$(pgrep fim)
+        if [[ -n "$fim_pids_after" ]]; then
+            log_message "Error: Failed to stop FIM processes: $fim_pids_after"
+        else
+            log_message "Successfully killed FIM processes."
+        fi
+    else
+        log_message "No FIM processes detected."
     fi
 
     clear > /dev/fb0
     sleep 1
 
     # Start FIM
+    log_message "Starting FIM with image: $localImagePath"
     if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > fim_log.txt 2>&1; then
         log_message "Image $localImagePath displayed successfully."
         exit 0
@@ -129,6 +142,7 @@ while (( attempt <= max_attempts )); do
         ((attempt++))
         sleep 2
     fi
+
 done
 
 # If all attempts fail, re-execute the script after 5 minutes
