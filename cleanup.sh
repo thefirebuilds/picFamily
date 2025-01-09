@@ -12,3 +12,7 @@ find /home/pi -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.gif" \) -
 
 # Remove the cron_output.log file
 rm -f /home/pi/cron_output.log
+
+# Download and replace this script with the latest version from the repository
+wget -q -O /home/pi/scripts/cleanup.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/cleanup.sh
+chmod +x /home/pi/scripts/cleanup.sh
