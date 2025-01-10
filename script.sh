@@ -42,11 +42,22 @@ while true; do
 done
 
 # Wait until internet is available by pinging an external server
-retry_command 5 ping -c 1 8.8.8.8 &>/dev/null || {
-    log_message "Internet connection not available. Exiting."
-    exit 1
-}
-log_message "Internet is available!"
+log_message "Checking internet connectivity for up to 5 minutes..."
+
+timeout=$((SECONDS + 300))  # Set a timeout of 5 minutes
+while (( SECONDS < timeout )); do
+    if ping -c 1 8.8.8.8 &>/dev/null; then
+        log_message "Internet is available!"
+        break
+    else
+        log_message "Internet not available. Retrying..."
+        sleep 5
+    fi
+done
+
+if ! ping -c 1 8.8.8.8 &>/dev/null; then
+    log_message "Failed to establish internet connectivity after 5 minutes. Continuing script..."
+fi
 
 # Sync time with an NTP server
 log_message "Syncing time with systemd-timesyncd..."
