@@ -1,5 +1,12 @@
 #!/bin/bash
+LOCK_FILE="/tmp/picfamily.lock"
 LOG_FILE="/home/pi/picfamily_debug.log"
+
+exec 200>$LOCK_FILE
+flock -n 200 || {
+    echo "$(date) - Another instance of the script is already running. Exiting." >> /home/pi/picfamily_debug.log
+    exit 1
+}
 
 log_message() {
     echo "$(date) - $1" >> "$LOG_FILE"
@@ -111,28 +118,28 @@ attempt=1
 while (( attempt <= max_attempts )); do
     log_message "Attempting to display image: $localImagePath (Attempt $attempt/$max_attempts)"
 
-# Ensure no FIM instances are running
-fim_pids=$(pgrep fim)
-if [[ -n "$fim_pids" ]]; then
-    log_message "FIM processes detected: $fim_pids. Attempting to kill..."
-    for pid in $fim_pids; do
-        log_message "Sending SIGTERM to FIM process: $pid"
-        kill "$pid"
-        sleep 2
-        if kill -0 "$pid" &>/dev/null; then
-            log_message "FIM process $pid did not terminate. Sending SIGKILL..."
-            kill -9 "$pid"
-            sleep 1
-        fi
-        if kill -0 "$pid" &>/dev/null; then
-            log_message "Error: Failed to stop FIM process: $pid"
-        else
-            log_message "FIM process $pid terminated successfully."
-        fi
-    done
-else
-    log_message "No active FIM processes detected."
-fi
+    # Ensure no FIM instances are running
+    fim_pids=$(pgrep fim)
+    if [[ -n "$fim_pids" ]]; then
+        log_message "FIM processes detected: $fim_pids. Attempting to kill..."
+        for pid in $fim_pids; do
+            log_message "Sending SIGTERM to FIM process: $pid"
+            kill "$pid"
+            sleep 2
+            if kill -0 "$pid" &>/dev/null; then
+                log_message "FIM process $pid did not terminate. Sending SIGKILL..."
+                kill -9 "$pid"
+                sleep 1
+            fi
+            if kill -0 "$pid" &>/dev/null; then
+                log_message "Error: Failed to stop FIM process: $pid"
+            else
+                log_message "FIM process $pid terminated successfully."
+            fi
+        done
+    else
+        log_message "No active FIM processes detected."
+    fi
 
     clear > /dev/fb0
     sleep 1
