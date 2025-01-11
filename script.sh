@@ -40,7 +40,7 @@ while true; do
         break
     fi
     log_message "No valid IP address assigned yet. Retrying..."
-    sleep 5
+    sleep 15
 done
 
 # Wait until internet is available by pinging an external server
