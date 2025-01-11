@@ -1,4 +1,3 @@
-#!/bin/bash
 LOCK_FILE="/tmp/picfamily.lock"
 LOG_FILE="/home/pi/picfamily_debug.log"
 
@@ -7,6 +6,9 @@ flock -n 200 || {
     echo "$(date) - Another instance of the script is already running. Exiting." >> /home/pi/picfamily_debug.log
     exit 1
 }
+
+# Set up a trap to release the lock and remove the lock file on script exit
+trap 'flock -u 200; rm -f "$LOCK_FILE"; exit' EXIT
 
 log_message() {
     echo "$(date) - $1" >> "$LOG_FILE"
