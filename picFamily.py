@@ -51,9 +51,15 @@ def hide_cursor():
     log_message("Hiding cursor...")
     try:
         # Use sudo to write to /sys/class/graphics/fbcon/cursor_blink
-        subprocess.run(["sudo", "sh", "-c", "echo 0 > /sys/class/graphics/fbcon>
+        subprocess.run(
+            ["sudo", "sh", "-c", "echo 0 > /sys/class/graphics/fbcon/cursor_blink"],
+            check=True
+        )
+        log_message("Cursor successfully hidden.")
     except subprocess.CalledProcessError as e:
         log_message(f"Failed to hide cursor: {e}")
+    except Exception as e:
+        log_message(f"Unexpected error while hiding cursor: {e}")
 
 def display_image(image_path):
     log_message(f"Displaying image: {image_path}")
