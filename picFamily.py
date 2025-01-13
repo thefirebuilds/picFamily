@@ -5,6 +5,7 @@ import subprocess
 import requests
 from pathlib import Path
 import logging
+from datetime import datetime
 from PIL import Image
 
 # Configure logging
@@ -18,22 +19,6 @@ logging.basicConfig(
 def log_message(message):
     logging.info(message)
     print(message)
-
-def retry_command(command, max_retries=5, delay=2):
-    attempt = 1
-    while attempt <= max_retries:
-        try:
-            if callable(command):
-                command()
-            else:
-                subprocess.run(command, check=True, shell=True)
-            return True
-        except Exception as e:
-            log_message(f"Attempt {attempt} failed: {e}")
-            attempt += 1
-            time.sleep(delay)
-    log_message(f"Command failed after {max_retries} attempts: {command}")
-    return False
 
 def fetch_settings(uri):
     log_message(f"Fetching settings from {uri}/settings...")
@@ -50,81 +35,94 @@ def fetch_settings(uri):
 def hide_cursor():
     log_message("Hiding cursor...")
     try:
-        # Use sudo to write to /sys/class/graphics/fbcon/cursor_blink
-        subprocess.run(
-            ["sudo", "sh", "-c", "echo 0 > /sys/class/graphics/fbcon/cursor_blink"],
-            check=True
-        )
+        subprocess.run(["sudo", "sh", "-c", "echo 0 > /sys/class/graphics/fbcon/cursor_blink"], check=True)
         log_message("Cursor successfully hidden.")
     except subprocess.CalledProcessError as e:
         log_message(f"Failed to hide cursor: {e}")
-    except Exception as e:
-        log_message(f"Unexpected error while hiding cursor: {e}")
-        
-def display_image(image_path):
-    log_message(f"Displaying image: {image_path}")
-    try:
-        subprocess.run(["fim", "-a", "-q", image_path], check=True)
-        log_message(f"Image displayed successfully: {image_path}")
-    except subprocess.CalledProcessError as e:
-        log_message(f"Error displaying image: {e}")
 
-def download_image(image_url, local_path):
-    log_message(f"Downloading image from {image_url}...")
+def display_image(local_image_path):
+    log_message(f"Displaying image: {local_image_path}")
     try:
-        response = requests.get(image_url, stream=True)
-        response.raise_for_status()
-        with open(local_path, "wb") as f:
-            f.write(response.content)
-        log_message(f"Image downloaded successfully: {local_path}")
-        return True
-    except requests.RequestException as e:
-        log_message(f"Failed to download image: {e}")
-        return False
+        subprocess.run(["fim", "-a", "-q", local_image_path], check=True)
+        log_message("Image displayed successfully.")
+    except subprocess.CalledProcessError as e:
+        log_message(f"Failed to display image: {e}")
+
+def download_image(uri, image_name):
+    full_path = f"{uri}/images/{image_name}"
+    local_image_path = Path(f"/home/pi/{image_name}")
+    if local_image_path.exists():
+        log_message(f"Image already exists locally: {local_image_path}. Skipping download.")
+    else:
+        log_message("Downloading image...")
+        try:
+            response = requests.get(full_path, stream=True)
+            response.raise_for_status()
+            with open(local_image_path, "wb") as f:
+                f.write(response.content)
+            log_message(f"Image downloaded successfully: {local_image_path}")
+        except requests.RequestException as e:
+            log_message(f"Failed to download image: {e}")
+            return None
+    return local_image_path
 
 def main():
     internal_uri = "http://192.168.86.167:3000"
     external_uri = "http://184.92.108.105:3000"
 
+    # Hide the cursor
     hide_cursor()
 
+    # Fetch settings immediately
+    settings = None
+    for uri in (internal_uri, external_uri):
+        settings = fetch_settings(uri)
+        if settings:
+            break
+
+    if not settings:
+        log_message("Failed to fetch settings. Exiting.")
+        return
+
+    current_pic = settings.get("currentPic")
+    if not current_pic:
+        log_message("No 'currentPic' found in settings. Exiting.")
+        return
+
+    # Display the image immediately
+    local_image_path = download_image(uri, current_pic)
+    if local_image_path:
+        display_image(str(local_image_path))
+    else:
+        log_message("Could not display the initial image. Exiting.")
+        return
+
+    # Refresh the image every hour at 1 minute past the hour
     while True:
-        # Wait until 1 minute after the hour
-        current_time = time.localtime()
-        if current_time.tm_min == 1:
-            settings = None
-            for uri in (internal_uri, external_uri):
-                settings = fetch_settings(uri)
-                if settings:
-                    break
+        now = datetime.now()
+        next_refresh = (now.replace(minute=1, second=0, microsecond=0) + timedelta(hours=1))
+        wait_time = (next_refresh - now).total_seconds()
+        log_message(f"Next refresh scheduled at {next_refresh}. Waiting {wait_time} seconds...")
+        time.sleep(wait_time)
 
-            if not settings:
-                log_message("Failed to fetch settings from both internal and external servers.")
-                time.sleep(60)  # Wait a minute before retrying
-                continue
+        # Fetch settings and update the image
+        for uri in (internal_uri, external_uri):
+            settings = fetch_settings(uri)
+            if settings:
+                break
 
-            current_pic = settings.get("currentPic")
-            if not current_pic:
-                log_message("Error: 'currentPic' not found in server response.")
-                time.sleep(60)
-                continue
+        if not settings:
+            log_message("Failed to fetch settings during refresh. Skipping.")
+            continue
 
-            log_message(f"Received 'currentPic': {current_pic}")
-            full_path = f"{uri}/images/{current_pic}"
-            local_image_path = Path(f"/home/pi/{current_pic}")
+        current_pic = settings.get("currentPic")
+        if not current_pic:
+            log_message("No 'currentPic' found during refresh. Skipping.")
+            continue
 
-            # Download the image if it doesn't exist locally or force update
-            if not local_image_path.exists() or settings.get("forceUpdate", False):
-                if not download_image(full_path, local_image_path):
-                    log_message("Failed to fetch the new image. Retrying next hour.")
-                    time.sleep(60)
-                    continue
-
-            # Display the image
+        local_image_path = download_image(uri, current_pic)
+        if local_image_path:
             display_image(str(local_image_path))
-
-        # Sleep until the next check
-        time.sleep(30)
 
 if __name__ == "__main__":
     main()
