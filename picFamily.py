@@ -60,7 +60,7 @@ def hide_cursor():
         log_message(f"Failed to hide cursor: {e}")
     except Exception as e:
         log_message(f"Unexpected error while hiding cursor: {e}")
-
+        
 def display_image(image_path):
     log_message(f"Displaying image: {image_path}")
     try:
