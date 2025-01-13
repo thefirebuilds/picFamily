@@ -43,7 +43,7 @@ def hide_cursor():
 def display_image(local_image_path):
     log_message(f"Attempting to display image: {local_image_path}")
     try:
-        command = ["fim", "-a", "-q", "T 1", local_image_path]
+        command = ["fim", "-a", "-q", local_image_path]
         log_message(f"Executing: {' '.join(command)}")
         subprocess.run(command, check=True)
         log_message("Image displayed successfully.")
