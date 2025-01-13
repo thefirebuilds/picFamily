@@ -75,9 +75,9 @@ def fetch_settings(uri):
 def hide_cursor():
     log_message("Hiding cursor...")
     try:
-        # Use sudo to write to the cursor_blink file
-        subprocess.run(["sudo", "sh", "-c", "echo 0 > /sys/class/graphics/fbcon/cursor_blink"], check=True)
-    except subprocess.CalledProcessError as e:
+        with open("/sys/class/graphics/fbcon/cursor_blink", "w") as f:
+            f.write("0")
+    except Exception as e:
         log_message(f"Failed to hide cursor: {e}")
 
 def display_image(local_image_path):
