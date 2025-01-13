@@ -1,132 +1,44 @@
 import os
 import time
-import json
 import subprocess
-import requests
-from pathlib import Path
-import logging
-from datetime import datetime
-from PIL import Image
-
-# Configure logging
-LOG_FILE = "/home/pi/picfamily_debug.log"
-logging.basicConfig(
-    filename=LOG_FILE,
-    level=logging.INFO,
-    format="%(asctime)s - %(message)s"
-)
 
 def log_message(message):
-    logging.info(message)
-    print(message)
+    with open("/home/pi/picfamily_debug.log", "a") as log_file:
+        log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {message}\n")
 
-def fetch_settings(uri):
-    log_message(f"Fetching settings from {uri}/settings...")
-    try:
-        response = requests.get(f"{uri}/settings", timeout=10)
-        response.raise_for_status()
-        settings = response.json()
-        log_message("Successfully fetched settings.")
-        return settings
-    except requests.RequestException as e:
-        log_message(f"Failed to fetch settings: {e}")
-        return None
+def wait_for_framebuffer():
+    while not os.path.exists('/dev/fb0'):
+        log_message("Waiting for framebuffer device...")
+        time.sleep(1)
+    log_message("Framebuffer device is ready.")
 
-def hide_cursor():
-    log_message("Hiding cursor...")
+def terminate_fim_processes():
     try:
-        subprocess.run(["sudo", "sh", "-c", "echo 0 > /sys/class/graphics/fbcon/cursor_blink"], check=True)
-        log_message("Cursor successfully hidden.")
-    except subprocess.CalledProcessError as e:
-        log_message(f"Failed to hide cursor: {e}")
+        fim_pids = subprocess.check_output(["pgrep", "fim"]).decode().split()
+        for pid in fim_pids:
+            log_message(f"Terminating FIM process: {pid}")
+            subprocess.run(["kill", pid])
+            time.sleep(2)
+    except subprocess.CalledProcessError:
+        log_message("No active FIM processes detected.")
 
 def display_image(local_image_path):
-    log_message(f"Attempting to display image: {local_image_path}")
+    log_message(f"Displaying image: {local_image_path}")
+    terminate_fim_processes()
+    os.system("clear > /dev/fb0")
+    time.sleep(1)
     try:
-        command = ["fim", "-a", "-q", local_image_path]
-        log_message(f"Executing: {' '.join(command)}")
-        subprocess.run(command, check=True)
+        subprocess.run(["sudo", "fim", "-a", "-q", "-d", "/dev/fb0", local_image_path], check=True)
         log_message("Image displayed successfully.")
     except subprocess.CalledProcessError as e:
         log_message(f"Failed to display image: {e}")
-    except Exception as ex:
-        log_message(f"Unexpected error: {ex}")
-
-def download_image(uri, image_name):
-    full_path = f"{uri}/images/{image_name}"
-    local_image_path = Path(f"/home/pi/{image_name}")
-    if local_image_path.exists():
-        log_message(f"Image already exists locally: {local_image_path}. Skipping download.")
-    else:
-        log_message("Downloading image...")
-        try:
-            response = requests.get(full_path, stream=True)
-            response.raise_for_status()
-            with open(local_image_path, "wb") as f:
-                f.write(response.content)
-            log_message(f"Image downloaded successfully: {local_image_path}")
-        except requests.RequestException as e:
-            log_message(f"Failed to download image: {e}")
-            return None
-    return local_image_path
-
-def main():
-    internal_uri = "http://192.168.86.167:3000"
-    external_uri = "http://184.92.108.105:3000"
-
-    # Hide the cursor
-    hide_cursor()
-
-    # Fetch settings immediately
-    settings = None
-    for uri in (internal_uri, external_uri):
-        settings = fetch_settings(uri)
-        if settings:
-            break
-
-    if not settings:
-        log_message("Failed to fetch settings. Exiting.")
-        return
-
-    current_pic = settings.get("currentPic")
-    if not current_pic:
-        log_message("No 'currentPic' found in settings. Exiting.")
-        return
-
-    # Display the image immediately
-    local_image_path = download_image(uri, current_pic)
-    if local_image_path:
-        display_image(str(local_image_path))
-    else:
-        log_message("Could not display the initial image. Exiting.")
-        return
-
-    # Refresh the image every hour at 1 minute past the hour
-    while True:
-        now = datetime.now()
-        next_refresh = (now.replace(minute=1, second=0, microsecond=0) + timedelta(hours=1))
-        wait_time = (next_refresh - now).total_seconds()
-        log_message(f"Next refresh scheduled at {next_refresh}. Waiting {wait_time} seconds...")
-        time.sleep(wait_time)
-
-        # Fetch settings and update the image
-        for uri in (internal_uri, external_uri):
-            settings = fetch_settings(uri)
-            if settings:
-                break
-
-        if not settings:
-            log_message("Failed to fetch settings during refresh. Skipping.")
-            continue
-
-        current_pic = settings.get("currentPic")
-        if not current_pic:
-            log_message("No 'currentPic' found during refresh. Skipping.")
-            continue
-
-        local_image_path = download_image(uri, current_pic)
-        if local_image_path:
-            display_image(str(local_image_path))
 
 if __name__ == "__main__":
-    main()
+    log_message("Script started.")
+    os.environ['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    os.environ['TERM'] = 'xterm'
+
+    wait_for_framebuffer()
+    log_message("Hiding cursor...")
+    subprocess.run(["echo", "0", "|", "sudo", "tee", "/sys/class/graphics/fbcon/cursor_blink"], shell=True)
+    display_image("/home/pi/IMG_0658.JPG")
