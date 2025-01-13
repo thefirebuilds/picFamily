@@ -71,13 +71,13 @@ def fetch_settings(uri):
     except requests.RequestException as e:
         log_message(f"Failed to fetch settings: {e}")
         return None
-
+        
 def hide_cursor():
     log_message("Hiding cursor...")
     try:
-        with open("/sys/class/graphics/fbcon/cursor_blink", "w") as f:
-            f.write("0")
-    except Exception as e:
+        # Use sudo to write to the cursor_blink file
+        subprocess.run(["sudo", "sh", "-c", "echo 0 > /sys/class/graphics/fbcon/cursor_blink"], check=True)
+    except subprocess.CalledProcessError as e:
         log_message(f"Failed to hide cursor: {e}")
 
 def display_image(local_image_path):
