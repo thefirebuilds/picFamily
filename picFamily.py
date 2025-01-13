@@ -41,12 +41,16 @@ def hide_cursor():
         log_message(f"Failed to hide cursor: {e}")
 
 def display_image(local_image_path):
-    log_message(f"Displaying image: {local_image_path}")
+    log_message(f"Attempting to display image: {local_image_path}")
     try:
-        subprocess.run(["fim", "-a", "-q", local_image_path], check=True)
+        command = ["fim", "-a", "-q", local_image_path]
+        log_message(f"Executing: {' '.join(command)}")
+        subprocess.run(command, check=True)
         log_message("Image displayed successfully.")
     except subprocess.CalledProcessError as e:
         log_message(f"Failed to display image: {e}")
+    except Exception as ex:
+        log_message(f"Unexpected error: {ex}")
 
 def download_image(uri, image_name):
     full_path = f"{uri}/images/{image_name}"
