@@ -93,14 +93,17 @@ def display_image(local_image_path):
         screen_width, screen_height = 800, 600  # Set to your screen resolution
         img = img.resize((screen_width, screen_height))
 
-        # Save the modified image (you can overwrite the original or save it as a temp file)
-        temp_image_path = "/tmp/modified_image.png"
-        img.save(temp_image_path)
+        # Convert image to RGB format
+        img = img.convert('RGB')
+
+        # Save the modified image as a temporary file in a format supported by framebuffer
+        temp_image_path = "/tmp/modified_image.bmp"
+        img.save(temp_image_path, format="BMP")
         
         while attempt <= max_attempts:
             try:
-                # Display the image using fim
-                subprocess.run(["sudo", "fim", "-A", "-q", "-T", "1", "-d", "/dev/fb0", temp_image_path], check=True)
+                # Display the image using Pillow
+                subprocess.run(["sudo", "fbi", "-T", "1", "-d", "/dev/fb0", temp_image_path], check=True)
                 log_message(f"Image {local_image_path} displayed successfully.")
                 return True
             except subprocess.CalledProcessError as e:
