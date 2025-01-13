@@ -157,9 +157,9 @@ while (( attempt <= max_attempts )); do
     clear > /dev/fb0
     sleep 1
 
-    # Start FIM
-    log_message "Starting FIM with image: $localImagePath"
-if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > /home/pi/scripts/fim_log.txt 2>&1
+# Start FIM
+log_message "Starting FIM with image: $localImagePath"
+if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > /home/pi/scripts/fim_log.txt 2>&1; then
     log_message "Image $localImagePath displayed successfully."
     exit 0
 else
