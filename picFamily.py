@@ -28,7 +28,7 @@ def display_image(local_image_path):
     os.system("clear > /dev/fb0")
     time.sleep(1)
     try:
-        subprocess.run(["sudo", "fim", "-a", "-q", "-d", "/dev/fb0", local_image_path], check=True)
+        subprocess.run(["sudo", "fim", "-a", "-q", "-T", "1", "-d", "/dev/fb0", local_image_path], check=True)
         log_message("Image displayed successfully.")
     except subprocess.CalledProcessError as e:
         log_message(f"Failed to display image: {e}")
