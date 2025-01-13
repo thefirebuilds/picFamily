@@ -159,14 +159,14 @@ while (( attempt <= max_attempts )); do
 
     # Start FIM
     log_message "Starting FIM with image: $localImagePath"
-    if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > /home/pi/scripts/fim_log.txt 2>&1
-        log_message "Image $localImagePath displayed successfully."
-        exit 0
-    else
-        log_message "Error: Failed to display image with FIM on attempt $attempt."
-        ((attempt++))
-        sleep 2
-    fi
+if sudo fim -A -q -T 1 -d /dev/fb0 "$localImagePath" > /home/pi/scripts/fim_log.txt 2>&1
+    log_message "Image $localImagePath displayed successfully."
+    exit 0
+else
+    log_message "Error: Failed to display image with FIM on attempt $attempt."
+    ((attempt++))
+    sleep 2
+fi
 
 done
 
