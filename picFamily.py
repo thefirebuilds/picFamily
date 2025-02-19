@@ -83,6 +83,16 @@ def main():
     last_displayed_time = 0
     last_checked_log_time = 0
 
+    # Fetch and display the image immediately on startup
+    current_pic, set_date = get_current_pic_metadata()
+    if current_pic and set_date:
+        log_message(f"Displaying initial image with setDate: {set_date}.")
+        image_path = download_image(current_pic, set_date) or os.path.join(IMAGE_PATH, current_pic)
+        display_image(image_path)
+        last_displayed_time = int(time.time())  # Mark this time as the last displayed time
+    else:
+        log_message("Initial metadata fetch failed. Waiting for next check.")
+
     while True:
         current_time = int(time.time())
 
@@ -93,19 +103,14 @@ def main():
 
         current_pic, set_date = get_current_pic_metadata()
         if current_pic and set_date:
-            if current_time - set_date >= IMAGE_REFRESH_INTERVAL:
+            if current_time - last_displayed_time >= IMAGE_REFRESH_INTERVAL:
                 log_message(f"New image detected with setDate: {set_date}. Refreshing display...")
 
-                image_path = os.path.join(IMAGE_PATH, current_pic)
-                if not os.path.exists(image_path):
-                    log_message(f"File {current_pic} does not exist locally. Downloading new image.")
-                    image_path = download_image(current_pic, set_date)
-
-                if image_path:
-                    display_image(image_path)
-                    last_displayed_time = current_time
+                image_path = download_image(current_pic, set_date) or os.path.join(IMAGE_PATH, current_pic)
+                display_image(image_path)
+                last_displayed_time = current_time  # Update last displayed time
             else:
-                log_message(f"Not yet time to refresh. Next refresh in {IMAGE_REFRESH_INTERVAL - (current_time - set_date)} seconds.")
+                log_message(f"Not yet time to refresh. Next refresh in {IMAGE_REFRESH_INTERVAL - (current_time - last_displayed_time)} seconds.")
         else:
             log_message("Invalid or missing metadata. Retrying...")
 
