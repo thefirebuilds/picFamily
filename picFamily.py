@@ -7,7 +7,7 @@ from urllib.request import urlopen, urlretrieve
 from datetime import datetime
 
 # Setup logging
-LOG_FILE = "/home/pi/picfamily_debug.log"
+LOG_FILE = "home_pi_picfamily_debug.log"
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format="%(asctime)s - %(message)s")
 
 def log_message(message):
@@ -51,7 +51,7 @@ def wait_for_framebuffer():
     while not os.path.exists("/dev/fb0"):
         log_message("Waiting for framebuffer device...")
         time.sleep(1)
-    log_message("/dev/fb0 ready")
+    log_message("dev fb0 ready")
     time.sleep(5)
 
 # Determine server URI
@@ -106,13 +106,10 @@ def display_image(image_path):
 # Calculate time until the next full hour
 def time_until_next_hour():
     now = datetime.now()
-    next_hour = now.replace(minute=0, second=0, microsecond=0)  # Start of current hour
-    next_hour = next_hour.timestamp() + 3600  # Add one hour
+    next_hour = now.replace(minute=0, second=0, microsecond=0).timestamp() + 3600
     sleep_time = int(next_hour - time.time())
-
-    next_update_time = datetime.fromtimestamp(next_hour).strftime("%Y-%m-%d %H:%M:%S")
-    log_message("Next image check scheduled for: {} ({} min {} sec from now)".format(next_update_time, sleep_time // 60, sleep_time % 60))
-
+    next_update_time = datetime.fromtimestamp(next_hour).strftime("%I:%M %p")
+    log_message(f"Next image check scheduled for {next_update_time} in {sleep_time // 60} minutes and {sleep_time % 60} seconds")
     return sleep_time
 
 # Main execution flow
@@ -130,9 +127,9 @@ if __name__ == "__main__":
         current_pic = fetch_settings(URI)
 
         if not current_pic:
-            log_message("Error: Failed to parse 'currentPic' from settings.")
+            log_message("Error Failed to parse 'currentPic' from settings.")
         else:
-            log_message(f"Received 'currentPic': {current_pic}")
+            log_message(f"Received 'currentPic' {current_pic}")
             
             image_url = f"{URI}/images/{current_pic}"
             local_image_path = f"/home/pi/{current_pic}"
@@ -147,5 +144,4 @@ if __name__ == "__main__":
 
         # Sleep until the next full hour
         sleep_time = time_until_next_hour()
-        log_message(f"Sleeping for {sleep_time // 60} minutes until the next full hour.")
         time.sleep(sleep_time)
