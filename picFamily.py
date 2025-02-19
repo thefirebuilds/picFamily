@@ -1,147 +1,115 @@
 import os
 import time
 import json
+import requests
 import subprocess
 import logging
-from urllib.request import urlopen, urlretrieve
 from datetime import datetime
 
-# Setup logging
-LOG_FILE = "home_pi_picfamily_debug.log"
+# Configuration
+BASE_URL = "http://192.168.86.167:3000/images"
+SETTINGS_URL = "http://192.168.86.167:3000/settings"
+IMAGE_PATH = "/home/pi"
+CHECK_INTERVAL = 300  # 5 minutes
+IMAGE_REFRESH_INTERVAL = 3600  # 1 hour
+
+# Logging setup
+LOG_FILE = "/home/pi/image_display.log"
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format="%(asctime)s - %(message)s")
 
 def log_message(message):
-    print(message)  # Also print to stdout for debugging
+    """Log a message to the console and log file."""
+    print(message)
     logging.info(message)
 
-# Wait for a valid IP address
-def get_valid_ip():
-    while True:
-        ip = subprocess.getoutput("hostname -I | awk '{print $1}'").strip()
-        if ip and ip != "127.0.0.1":
-            log_message(f"Valid IP address assigned: {ip}")
-            return ip
-        log_message("No valid IP address assigned yet. Retrying...")
-        time.sleep(15)
-
-# Check internet connectivity
-def wait_for_internet(timeout=300):
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if os.system("ping -c 1 8.8.8.8 > /dev/null 2>&1") == 0:
-            log_message("Internet is available!")
-            return True
-        log_message("Internet not available. Retrying...")
-        time.sleep(5)
-    log_message("Failed to establish internet connectivity after 5 minutes.")
-    return False
-
-# Sync system time
-def sync_time():
-    for _ in range(5):
-        if os.system("sudo timedatectl set-ntp true") == 0:
-            log_message("Time synced successfully.")
-            return
-        log_message("Failed to enable NTP synchronization. Retrying...")
-        time.sleep(2)
-    log_message("Failed to sync time after multiple attempts.")
-
-# Wait for framebuffer device
-def wait_for_framebuffer():
-    while not os.path.exists("/dev/fb0"):
-        log_message("Waiting for framebuffer device...")
-        time.sleep(1)
-    log_message("dev fb0 ready")
-    time.sleep(5)
-
-# Determine server URI
-def get_server_uri():
-    internal_url = "http://192.168.86.167:3000/settings"
-    external_url = "http://184.92.108.105:3000/settings"
-
-    for url in [internal_url, external_url]:
-        try:
-            response = urlopen(url)
-            if response.getcode() == 200:
-                log_message(f"Using server at {url}")
-                return url.replace("/settings", "")
-        except:
-            log_message(f"Failed to connect to {url}")
-    
-    log_message("Failed to connect to both internal and external servers. Exiting.")
-    exit(1)
-
-# Fetch settings from server
-def fetch_settings(uri):
-    settings_url = f"{uri}/settings"
+def get_current_pic_metadata():
+    """Fetch the metadata for the current image."""
     try:
-        urlretrieve(settings_url, "/tmp/settings.json")
-        with open("/tmp/settings.json") as f:
-            data = json.load(f)
-            return data.get("currentPic")
-    except:
-        log_message("Failed to fetch settings from server.")
+        log_message(f"Fetching metadata from: {SETTINGS_URL}")
+        response = requests.get(SETTINGS_URL, timeout=10)
+        log_message(f"Received HTTP status: {response.status_code}")
+        response.raise_for_status()
+        log_message(f"Raw response: {response.text}")
+
+        data = response.json()
+        log_message(f"Parsed metadata: {data}")
+
+        current_pic = data.get("currentPic")
+        set_date = data.get("setDate")
+
+        if current_pic and set_date:
+            try:
+                set_date = int(set_date)
+            except ValueError:
+                log_message(f"Invalid setDate value: {set_date}")
+                return None, None
+            return current_pic, set_date
+        else:
+            log_message("Missing 'currentPic' or 'setDate' in response.")
+            return None, None
+    except requests.RequestException as e:
+        log_message(f"Error fetching metadata: {e}")
+        return None, None
+
+def download_image(image_name, timestamp):
+    """Download the image from the server."""
+    url = f"{BASE_URL}/{image_name}?nocache={timestamp}"
+    file_path = os.path.join(IMAGE_PATH, image_name)
+
+    log_message(f"Downloading from {url}...")
+    try:
+        response = requests.get(url, stream=True, timeout=15)
+        response.raise_for_status()
+        with open(file_path, "wb") as file:
+            for chunk in response.iter_content(1024):
+                file.write(chunk)
+        log_message(f"File {image_name} downloaded successfully to {file_path}.")
+        return file_path
+    except requests.RequestException as e:
+        log_message(f"Failed to download {image_name}: {e}")
         return None
 
-# Display the image
 def display_image(image_path):
-    log_message(f"Attempting to display image: {image_path}")
-    os.system("clear > /dev/fb0")
-    time.sleep(1)
-    
-    for attempt in range(1, 6):
-        log_message(f"Displaying image attempt {attempt}/5")
-        os.system("sudo killall fim > /dev/null 2>&1 && sleep 1")
-        time.sleep(1)
+    """Display the image using fim in a subprocess."""
+    log_message(f"Displaying image: {image_path}")
+    try:
+        subprocess.run(["fim", "-a", image_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        log_message(f"Failed to display image: {e}")
 
-        result = os.system(f"sudo fim -A -q -T 1 -d /dev/fb0 --force {image_path}")
-        if result == 0:
-            log_message("Image displayed successfully.")
-            return
-        log_message("Error displaying image. Retrying...")
-        time.sleep(2)
-
-    log_message("Failed to display image after multiple attempts.")
-
-# Calculate time until the next full hour
-def time_until_next_hour():
-    now = datetime.now()
-    next_hour = now.replace(minute=0, second=0, microsecond=0).timestamp() + 3600
-    sleep_time = int(next_hour - time.time())
-    next_update_time = datetime.fromtimestamp(next_hour).strftime("%I:%M %p")
-    log_message(f"Next image check scheduled for {next_update_time} in {sleep_time // 60} minutes and {sleep_time % 60} seconds")
-    return sleep_time
-
-# Main execution flow
-if __name__ == "__main__":
-    log_message("Starting picFamily.py...")
-
-    get_valid_ip()
-    wait_for_internet()
-    sync_time()
-    wait_for_framebuffer()
-
-    URI = get_server_uri()
+def main():
+    """Main script loop to check and refresh the image."""
+    log_message("Script started.")
+    last_displayed_time = 0
+    last_checked_log_time = 0
 
     while True:
-        current_pic = fetch_settings(URI)
+        current_time = int(time.time())
 
-        if not current_pic:
-            log_message("Error Failed to parse 'currentPic' from settings.")
+        # Debug logging every 5 minutes
+        if current_time - last_checked_log_time >= CHECK_INTERVAL:
+            log_message("Checking if it's time to refresh the image...")
+            last_checked_log_time = current_time
+
+        current_pic, set_date = get_current_pic_metadata()
+        if current_pic and set_date:
+            if current_time - set_date >= IMAGE_REFRESH_INTERVAL:
+                log_message(f"New image detected with setDate: {set_date}. Refreshing display...")
+
+                image_path = os.path.join(IMAGE_PATH, current_pic)
+                if not os.path.exists(image_path):
+                    log_message(f"File {current_pic} does not exist locally. Downloading new image.")
+                    image_path = download_image(current_pic, set_date)
+
+                if image_path:
+                    display_image(image_path)
+                    last_displayed_time = current_time
+            else:
+                log_message(f"Not yet time to refresh. Next refresh in {IMAGE_REFRESH_INTERVAL - (current_time - set_date)} seconds.")
         else:
-            log_message(f"Received 'currentPic' {current_pic}")
-            
-            image_url = f"{URI}/images/{current_pic}"
-            local_image_path = f"/home/pi/{current_pic}"
+            log_message("Invalid or missing metadata. Retrying...")
 
-            if not os.path.exists(local_image_path):
-                log_message("Downloading new image...")
-                urlretrieve(image_url, local_image_path)
-                log_message("Image downloaded successfully.")
+        time.sleep(CHECK_INTERVAL)
 
-            os.system("echo 0 | sudo tee /sys/class/graphics/fbcon/cursor_blink > /dev/null")
-            display_image(local_image_path)
-
-        # Sleep until the next full hour
-        sleep_time = time_until_next_hour()
-        time.sleep(sleep_time)
+if __name__ == "__main__":
+    main()
