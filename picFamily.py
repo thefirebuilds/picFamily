@@ -91,10 +91,10 @@ def display_image(image_path):
     
     for attempt in range(1, 6):
         log_message(f"Displaying image attempt {attempt}/5")
-        os.system("sudo killall fim > /dev/null 2>&1")
+        os.system("sudo killall fim > /dev/null 2>&1 && sleep 1")
         time.sleep(1)
 
-        result = os.system(f"sudo fim -A -q -T 1 -d /dev/fb0 {image_path}")
+        result = os.system(f"sudo fim -A -q -T 1 -d /dev/fb0 --force {image_path}")
         if result == 0:
             log_message("Image displayed successfully.")
             return
