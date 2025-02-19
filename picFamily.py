@@ -73,7 +73,7 @@ def display_image(image_path):
     """Display the image using fim in a subprocess."""
     log_message(f"Displaying image: {image_path}")
     try:
-        subprocess.run(["fim", "-a", image_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(["fim", "-a", image_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
         log_message(f"Failed to display image: {e}")
 
@@ -95,6 +95,7 @@ def main():
 
     while True:
         current_time = int(time.time())
+        log_message(f"Loop iteration at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
         # Debug logging every 5 minutes
         if current_time - last_checked_log_time >= CHECK_INTERVAL:
