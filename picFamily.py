@@ -111,7 +111,7 @@ def time_until_next_hour():
     sleep_time = int(next_hour - time.time())
 
     next_update_time = datetime.fromtimestamp(next_hour).strftime("%Y-%m-%d %H:%M:%S")
-    log_message(f"Next image check scheduled for: {next_update_time} ({sleep_time // 60} min {sleep_time % 60} sec from now})")
+    log_message("Next image check scheduled for: {} ({} min {} sec from now)".format(next_update_time, sleep_time // 60, sleep_time % 60))
 
     return sleep_time
 
