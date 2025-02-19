@@ -4,6 +4,7 @@ import json
 import subprocess
 import logging
 from urllib.request import urlopen, urlretrieve
+from datetime import datetime
 
 # Setup logging
 LOG_FILE = "/home/pi/picfamily_debug.log"
@@ -80,7 +81,7 @@ def fetch_settings(uri):
             return data.get("currentPic")
     except:
         log_message("Failed to fetch settings from server.")
-        exit(1)
+        return None
 
 # Display the image
 def display_image(image_path):
@@ -100,9 +101,14 @@ def display_image(image_path):
         log_message("Error displaying image. Retrying...")
         time.sleep(2)
 
-    log_message("Failed to display image after multiple attempts. Restarting script in 5 minutes.")
-    time.sleep(300)
-    os.execv(__file__, [""])
+    log_message("Failed to display image after multiple attempts.")
+
+# Calculate time until the next full hour
+def time_until_next_hour():
+    now = datetime.now()
+    next_hour = now.replace(minute=0, second=0, microsecond=0)  # Start of current hour
+    next_hour = next_hour.timestamp() + 3600  # Add one hour
+    return int(next_hour - time.time())
 
 # Main execution flow
 if __name__ == "__main__":
@@ -114,22 +120,27 @@ if __name__ == "__main__":
     wait_for_framebuffer()
 
     URI = get_server_uri()
-    current_pic = fetch_settings(URI)
 
-    if not current_pic:
-        log_message("Error: Failed to parse 'currentPic' from settings.")
-        exit(1)
+    while True:
+        current_pic = fetch_settings(URI)
 
-    log_message(f"Received 'currentPic': {current_pic}")
-    
-    image_url = f"{URI}/images/{current_pic}"
-    local_image_path = f"/home/pi/{current_pic}"
+        if not current_pic:
+            log_message("Error: Failed to parse 'currentPic' from settings.")
+        else:
+            log_message(f"Received 'currentPic': {current_pic}")
+            
+            image_url = f"{URI}/images/{current_pic}"
+            local_image_path = f"/home/pi/{current_pic}"
 
-    if not os.path.exists(local_image_path):
-        log_message("Downloading image...")
-        urlretrieve(image_url, local_image_path)
-        log_message("Image downloaded successfully.")
-    
-    os.system("echo 0 | sudo tee /sys/class/graphics/fbcon/cursor_blink > /dev/null")
-    
-    display_image(local_image_path)
+            if not os.path.exists(local_image_path):
+                log_message("Downloading new image...")
+                urlretrieve(image_url, local_image_path)
+                log_message("Image downloaded successfully.")
+
+            os.system("echo 0 | sudo tee /sys/class/graphics/fbcon/cursor_blink > /dev/null")
+            display_image(local_image_path)
+
+        # Sleep until the next full hour
+        sleep_time = time_until_next_hour()
+        log_message(f"Sleeping for {sleep_time // 60} minutes until the next full hour.")
+        time.sleep(sleep_time)
