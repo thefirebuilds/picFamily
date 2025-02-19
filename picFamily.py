@@ -108,7 +108,12 @@ def time_until_next_hour():
     now = datetime.now()
     next_hour = now.replace(minute=0, second=0, microsecond=0)  # Start of current hour
     next_hour = next_hour.timestamp() + 3600  # Add one hour
-    return int(next_hour - time.time())
+    sleep_time = int(next_hour - time.time())
+
+    next_update_time = datetime.fromtimestamp(next_hour).strftime("%Y-%m-%d %H:%M:%S")
+    log_message(f"Next image check scheduled for: {next_update_time} ({sleep_time // 60} min {sleep_time % 60} sec from now})")
+
+    return sleep_time
 
 # Main execution flow
 if __name__ == "__main__":
