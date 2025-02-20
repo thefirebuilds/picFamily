@@ -14,7 +14,7 @@ install_packages() {
     sudo apt install -y python3 fim
 }
 
-def configure_screen_rotation() bro
+def configure_screen_rotation() {
     config_file = "/boot/firmware/config.txt"
     if os.path.isfile(config_file):
         log("Setting up screen rotation in config.txt...")
