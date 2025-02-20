@@ -73,7 +73,9 @@ update_crontab() {
     log "Updating crontab..."
     
     crontab -l 2>/dev/null > /tmp/mycron.log
-    echo "@reboot wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py" >> /tmp/mycron.log
+    
+    # Adding crontab entries with internet check
+    echo "@reboot /bin/bash -c 'until ping -c 1 google.com; do sleep 1; done; wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py'" >> /tmp/mycron.log
     echo "@reboot python3 /home/pi/scripts/picFamily.py" >> /tmp/mycron.log
     echo "0 2 * * 0 /sbin/reboot" >> /tmp/mycron.log
     
