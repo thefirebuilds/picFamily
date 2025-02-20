@@ -14,6 +14,18 @@ install_packages() {
     sudo apt install -y python3 fim
 }
 
+def configure_screen_rotation():
+    config_file = "/boot/firmware/config.txt"
+    if os.path.isfile(config_file):
+        log("Setting up screen rotation in config.txt...")
+        subprocess.run(["sudo", "sed", "-i", "s/^display_rotate=.*/display_rotate=1/", config_file], check=True)
+        with open(config_file, "a") as f:
+            f.write("display_rotate=1\n")
+        subprocess.run(["sudo", "sed", "-i", "s/^dtoverlay=vc4-kms-v3d/#dtoverlay=vc4-kms-v3d/", config_file], check=True)
+        log("Screen rotation setup complete. Please reboot for changes to take effect.")
+    else:
+        log("Configuration file not found. Please check your setup.")
+
 setup_scripts_directory() {
     log "Ensuring scripts directory exists..."
     mkdir -p /home/pi/scripts
@@ -38,6 +50,7 @@ main() {
     setup_scripts_directory
     download_script
     update_crontab
+    configure_screen_rotation()
     log "Setup complete!"
 }
 
