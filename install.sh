@@ -70,29 +70,27 @@ download_script() {
 }
 
 update_crontab() {
-    log "Updating crontab..."
-    
-    crontab -l 2>/dev/null > /tmp/mycron.log
-    
-    # Clear the current crontab
-    crontab -r
+    log "Updating sudo crontab..."
+
+    # Backup and clear current sudo crontab
+    sudo crontab -l 2>/dev/null > /tmp/mycron.log
+    sudo crontab -r
 
     # Ensure the log file exists and has correct permissions
-    touch /home/pi/cron_output.log
-    chmod 666 /home/pi/cron_output.log
+    sudo touch /home/pi/cron_output.log
+    sudo chmod 666 /home/pi/cron_output.log
 
-    # Add new crontab entries
-    echo "@reboot /bin/bash -c 'until ping -c 1 google.com; do sleep 1; done; echo \"Ping successful\" >> /home/pi/cron_output.log 2>&1; wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py >> /home/pi/cron_output.log 2>&1'" | crontab -
-    echo "@reboot sudo python3 /home/pi/scripts/picFamily.py >> /home/pi/cron_output.log 2>&1" | crontab -
+    # Add new sudo crontab entries
+    echo "@reboot wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh >> /home/pi/cron_output.log 2>&1" | sudo crontab -
+    echo "@reboot /usr/bin/python /home/pi/scripts/picFamily.py > /home/pi/cron.log 2>&1" | sudo crontab -
+    echo "0 2 * * 0 /sbin/reboot" | sudo crontab -
 
-    # Verify cron job setup by appending current time to the log
-    echo "@reboot echo \"Cron job started at $(date)\" >> /home/pi/cron_output.log" | crontab -
-    
-    crontab /tmp/mycron.log 2>/tmp/crontab_error.log
+    # Verify sudo crontab setup
+    sudo crontab -l > /tmp/verify_crontab.log
     if [ $? -eq 0 ]; then
-        log "Crontab updated successfully."
+        log "Sudo crontab updated successfully."
     else
-        log "Error updating crontab. Check /tmp/crontab_error.log for details."
+        log "Error updating sudo crontab. Check /tmp/verify_crontab.log for details."
     fi
     
     rm /tmp/mycron.log
