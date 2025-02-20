@@ -58,7 +58,8 @@ main() {
     download_script
     update_crontab
     configure_screen_rotation
-    log "Setup complete!"
+    log "Setup complete! Rebooting now..."
+    sudo reboot
 }
 
 main
