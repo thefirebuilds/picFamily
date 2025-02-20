@@ -77,10 +77,16 @@ update_crontab() {
     # Clear the current crontab
     crontab -r
 
+    # Ensure the log file exists and has correct permissions
+    touch /home/pi/cron_output.log
+    chmod 666 /home/pi/cron_output.log
+
     # Add new crontab entries
-    echo "@reboot /bin/bash -c 'until ping -c 1 google.com; do sleep 1; done' >> /home/pi/cron_output.log 2>&1" | crontab -
-    echo "@reboot sudo wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py >> /home/pi/cron_output.log 2>&1" | crontab -
+    echo "@reboot /bin/bash -c 'until ping -c 1 google.com; do sleep 1; done; echo \"Ping successful\" >> /home/pi/cron_output.log 2>&1; wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py >> /home/pi/cron_output.log 2>&1'" | crontab -
     echo "@reboot sudo python3 /home/pi/scripts/picFamily.py >> /home/pi/cron_output.log 2>&1" | crontab -
+
+    # Verify cron job setup by appending current time to the log
+    echo "@reboot echo \"Cron job started at $(date)\" >> /home/pi/cron_output.log" | crontab -
     
     crontab /tmp/mycron.log 2>/tmp/crontab_error.log
     if [ $? -eq 0 ]; then
