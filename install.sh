@@ -14,18 +14,24 @@ install_packages() {
     sudo apt install -y python3 fim
 }
 
-def configure_screen_rotation() {
-    config_file = "/boot/firmware/config.txt"
-    if os.path.isfile(config_file):
-        log("Setting up screen rotation in config.txt...")
-        subprocess.run(["sudo", "sed", "-i", "s/^display_rotate=.*/display_rotate=1/", config_file], check=True)
-        with open(config_file, "a") as f:
-            f.write("display_rotate=1\n")
-        subprocess.run(["sudo", "sed", "-i", "s/^dtoverlay=vc4-kms-v3d/#dtoverlay=vc4-kms-v3d/", config_file], check=True)
-        log("Screen rotation setup complete. Please reboot for changes to take effect.")
-    else:
-        log("Configuration file not found. Please check your setup.")
-    }
+configure_screen_rotation() {
+    config_file="/boot/firmware/config.txt"
+    
+    if [ -f "$config_file" ]; then
+        log "Setting up screen rotation in config.txt..."
+        
+        sudo sed -i 's/^display_rotate=.*/display_rotate=1/' "$config_file"
+        if ! grep -q "^display_rotate=" "$config_file"; then
+            echo "display_rotate=1" | sudo tee -a "$config_file"
+        fi
+        
+        sudo sed -i 's/^dtoverlay=vc4-kms-v3d/#dtoverlay=vc4-kms-v3d/' "$config_file"
+        
+        log "Screen rotation setup complete. Please reboot for changes to take effect."
+    else
+        log "Configuration file not found. Please check your setup."
+    fi
+}
 
 setup_scripts_directory() {
     log "Ensuring scripts directory exists..."
