@@ -57,7 +57,7 @@ main() {
     setup_scripts_directory
     download_script
     update_crontab
-    configure_screen_rotation()
+    configure_screen_rotation
     log "Setup complete!"
 }
 
