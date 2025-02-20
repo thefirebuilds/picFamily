@@ -75,9 +75,11 @@ update_crontab() {
     crontab -l 2>/dev/null > /tmp/mycron.log
     
     # Adding crontab entries with internet check
-    echo "@reboot /bin/bash -c 'until ping -c 1 google.com; do sleep 1; done; wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py'" >> /tmp/mycron.log
-    echo "@reboot python3 /home/pi/scripts/picFamily.py" >> /tmp/mycron.log
-    echo "0 2 * * 0 /sbin/reboot" >> /tmp/mycron.log
+    echo "@reboot crontab -r" >> /tmp/mycron.log
+    echo "@reboot /bin/bash -c 'wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py'" >> /tmp/mycron.log
+    echo "@reboot /bin/bash -c 'sleep 5'" >> /tmp/mycron.log
+    echo "@reboot /bin/bash -c 'until ping -c 1 google.com; do sleep 1; done; python3 /home/pi/scripts/picFamily.py'" >> /tmp/mycron.log
+
     
     crontab /tmp/mycron.log 2>/tmp/crontab_error.log
     if [ $? -eq 0 ]; then
