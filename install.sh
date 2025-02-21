@@ -80,10 +80,13 @@ update_crontab() {
     sudo touch /home/pi/cron_output.log
     sudo chmod 666 /home/pi/cron_output.log
 
-    # Add new sudo crontab entries
-    echo "@reboot wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh >> /home/pi/cron_output.log 2>&1" | sudo crontab -
-    echo "@reboot /usr/bin/python /home/pi/scripts/picFamily.py > /home/pi/cron.log 2>&1" | sudo crontab -
-    echo "0 2 * * 0 /sbin/reboot" | sudo crontab -
+    # Create a new sudo crontab file
+    echo "@reboot wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh >> /home/pi/cron_output.log 2>&1" > /tmp/new_cron
+    echo "@reboot /usr/bin/python /home/pi/scripts/picFamily.py > /home/pi/cron.log 2>&1" >> /tmp/new_cron
+    echo "0 2 * * 0 /sbin/reboot" >> /tmp/new_cron
+
+    # Load the new crontab file into sudo crontab
+    sudo crontab /tmp/new_cron
 
     # Verify sudo crontab setup
     sudo crontab -l > /tmp/verify_crontab.log
@@ -93,7 +96,7 @@ update_crontab() {
         log "Error updating sudo crontab. Check /tmp/verify_crontab.log for details."
     fi
     
-    rm /tmp/mycron.log
+    rm /tmp/mycron.log /tmp/new_cron
 }
 
 main() {
