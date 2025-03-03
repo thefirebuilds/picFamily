@@ -222,6 +222,12 @@ def main():
     log_message(f"Using BASE_URL: {BASE_URL}")
 
     wait_for_framebuffer()
+
+    # Clear the framebuffer before displaying anything
+    log_message("Clearing framebuffer...")
+    subprocess.run(["sudo", "dd", "if=/dev/zero", "of=/dev/fb0", "bs=1228800", "count=1"])
+    log_message("Framebuffer cleared.")
+
     hide_cursor()
     verify_cursor_hidden()
 
@@ -246,7 +252,6 @@ def main():
             local_image_path = check_and_download_image(new_pic)
             if local_image_path:
                 display_image(local_image_path)
-#iteration 29 worked OK but on a 5 min recheck.  this is iteration 30 to do a 1 hr recheck
 
 if __name__ == "__main__":
     main()
