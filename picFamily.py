@@ -222,11 +222,14 @@ def main():
     log_message(f"Using BASE_URL: {BASE_URL}")
 
     wait_for_framebuffer()
-
+    
     # Clear the framebuffer before displaying anything
     log_message("Clearing framebuffer...")
     subprocess.run(["sudo", "dd", "if=/dev/zero", "of=/dev/fb0", "bs=1228800", "count=1"])
     log_message("Framebuffer cleared.")
+    # Ensure text stays black permanently
+    log_message("Setting Text to Black.")
+    subprocess.run(["sudo", "setterm", "-term", "linux", "-foreground", "black"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     hide_cursor()
     verify_cursor_hidden()
