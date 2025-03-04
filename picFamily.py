@@ -201,6 +201,10 @@ def main():
     os.environ['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
     os.environ['TERM'] = 'xterm'
 
+    # Ensure text stays black permanently
+    log_message("Setting Text to Black.")
+    subprocess.run(["sudo", "setterm", "-term", "linux", "-foreground", "black"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
     while not get_device_ip():
         log_message("No IP address assigned. Retrying...")
         time.sleep(5)
@@ -227,9 +231,6 @@ def main():
     log_message("Clearing framebuffer...")
     subprocess.run(["sudo", "dd", "if=/dev/zero", "of=/dev/fb0", "bs=1228800", "count=1"])
     log_message("Framebuffer cleared.")
-    # Ensure text stays black permanently
-    log_message("Setting Text to Black.")
-    subprocess.run(["sudo", "setterm", "-term", "linux", "-foreground", "black"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     hide_cursor()
     verify_cursor_hidden()
