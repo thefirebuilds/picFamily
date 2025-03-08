@@ -41,18 +41,23 @@ def sync_device_time():
         return False
 
 def is_inside_local_network():
-    """Check if the device is inside the local network."""
-    try:
-        gateway = subprocess.check_output(["ip", "route", "show", "default"]).decode().split()[2]
-        if gateway.startswith("192.168"):
-            log_message(f"Device is inside the local network (Gateway: {gateway}).")
-            return True
-        else:
-            log_message(f"Device is outside the local network (Gateway: {gateway}).")
-            return False
-    except subprocess.CalledProcessError as e:
-        log_message(f"Failed to check network gateway: {e}")
-        return False
+    """Determine if the device is inside the local network based on JSON response from known IPs."""
+    urls = {
+        "local": "http://192.168.86.167:3000/settings",
+        "external": "http://184.92.108.105:3000/settings"
+    }
+    
+    for network, url in urls.items():
+        try:
+            response = requests.get(url, timeout=2)
+            if response.headers.get("Content-Type", "").startswith("application/json"):
+                log_message(f"Device is on the {network} network (URL: {url}).")
+                return network == "local"
+        except requests.RequestException:
+            log_message(f"Could not reach {url}")
+
+    log_message("Unable to determine network status.")
+    return None  # Indicates an unknown network state
 
 def wait_for_framebuffer():
     """Wait for framebuffer device to be available."""
