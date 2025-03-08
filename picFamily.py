@@ -7,7 +7,10 @@ from datetime import datetime
 # Global constants for paths and URLs
 BASE_PATH = "/home/pi"
 LOG_FILE = "/home/pi/picfamily_debug.log"
-BASE_URL = "http://192.168.86.167:3000/images"
+
+# These are the base URLs used to for whether the device is inside my network or not.
+INTERNAL_URL = "http://192.168.86.167:3000"
+EXTERNAL_URL = "http://184.92.108.105:3000"
 
 def log_message(message):
     """Log messages to the log file."""
@@ -43,8 +46,8 @@ def sync_device_time():
 def is_inside_local_network():
     """Determine if the device is inside the local network based on JSON response from known IPs."""
     urls = {
-        "local": "http://192.168.86.167:3000/settings",
-        "external": "http://184.92.108.105:3000/settings"
+        "local": f"{INTERNAL_URL}/settings",
+        "external": f"{EXTERNAL_URL}/settings"
     }
     
     for network, url in urls.items():
@@ -68,7 +71,7 @@ def wait_for_framebuffer():
 
 def get_current_pic():
     """Fetch the current image file name from the server."""
-    url = "http://192.168.86.167:3000/settings"
+    url = f"{BASE_URL}/settings"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
@@ -101,14 +104,12 @@ def check_metadata(file_path):
 def check_and_download_image(file_name):
     """Check if the image exists locally, otherwise download it."""
     file_path = os.path.join(BASE_PATH, file_name)
-    
-    # Check metadata before downloading
+
     existing_size, existing_mod_time = check_metadata(file_path)
     if existing_size:
-        # If file is already downloaded, check if it has been modified
-        url = f"{BASE_URL}/{file_name}"
+        url = f"{BASE_URL}/images/{file_name}"
         try:
-            response = requests.head(url, timeout=10)  # Use HEAD to fetch headers only
+            response = requests.head(url, timeout=10)
             response.raise_for_status()
             remote_size = int(response.headers.get('Content-Length', 0))
             remote_mod_time = response.headers.get('Last-Modified')
@@ -123,11 +124,11 @@ def check_and_download_image(file_name):
                 log_message(f"File {file_name} is outdated or different. Re-downloading...")
         except requests.RequestException as e:
             log_message(f"Error checking remote file metadata: {e}")
-    
-    # If no valid local file or outdated, download it
+
+    # Download file
     try:
-        log_message(f"File {file_name} not found locally or outdated. Downloading from {BASE_URL}/{file_name}...")
-        response = requests.get(f"{BASE_URL}/{file_name}", stream=True)
+        log_message(f"Downloading {file_name} from {BASE_URL}/images/{file_name}...")
+        response = requests.get(f"{BASE_URL}/images/{file_name}", stream=True)
         if response.status_code == 200:
             with open(file_path, "wb") as file:
                 for chunk in response.iter_content(chunk_size=1024):
@@ -140,7 +141,7 @@ def check_and_download_image(file_name):
     except requests.RequestException as e:
         log_message(f"An error occurred while downloading the file: {e}")
         return None
-
+        
 def terminate_fim_processes():
     """Terminate any existing fim processes."""
     try:
@@ -206,7 +207,6 @@ def main():
     os.environ['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
     os.environ['TERM'] = 'xterm'
 
-    # Ensure text stays black permanently
     log_message("Setting Text to Black.")
     subprocess.run(["sudo", "setterm", "-term", "linux", "-foreground", "black"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -224,15 +224,11 @@ def main():
         time.sleep(5)
 
     global BASE_URL
-    if is_inside_local_network():
-        BASE_URL = "http://192.168.86.167:3000/images"
-    else:
-        BASE_URL = "http://184.92.108.105:3000/images"
+    BASE_URL = INTERNAL_URL if is_inside_local_network() else EXTERNAL_URL
     log_message(f"Using BASE_URL: {BASE_URL}")
 
     wait_for_framebuffer()
-    
-    # Clear the framebuffer before displaying anything
+
     log_message("Clearing framebuffer...")
     subprocess.run(["sudo", "dd", "if=/dev/zero", "of=/dev/fb0", "bs=1228800", "count=1"])
     log_message("Framebuffer cleared.")
@@ -247,15 +243,11 @@ def main():
             display_image(local_image_path)
 
     while True:
-        # Calculate time to wait until the next full hour
         now = datetime.now()
-        seconds_to_next_hour = (60 - now.minute) * 60 - now.second  # Wait until the next full hour
+        seconds_to_next_hour = (60 - now.minute) * 60 - now.second
         log_message(f"Waiting for {seconds_to_next_hour} seconds until the top of the next hour...")
-
-        # Wait for the calculated time
         time.sleep(seconds_to_next_hour)
 
-        # Fetch and display the new image right after the hour
         new_pic = get_current_pic()
         if new_pic:
             local_image_path = check_and_download_image(new_pic)
