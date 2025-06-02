@@ -52,16 +52,20 @@ def is_inside_local_network():
     
     for network, url in urls.items():
         try:
+            print(f"Trying to reach {network} URL: {url}")  # Console log
             response = requests.get(url, timeout=2)
             if response.headers.get("Content-Type", "").startswith("application/json"):
                 log_message(f"Device is on the {network} network (URL: {url}).")
+                print(f"✓ Device is on the {network} network (URL: {url})")  # Console log
                 return network == "local"
-        except requests.RequestException:
-            log_message(f"Could not reach {url}")
+        except requests.RequestException as e:
+            log_message(f"Could not reach {url}: {e}")
+            print(f"✗ Could not reach {network} URL: {url} -- {e}")  # Console log
 
     log_message("Unable to determine network status.")
-    return None  # Indicates an unknown network state
-
+    print("⚠️  Unable to determine network status.")  # Console log
+    return None
+    
 def wait_for_framebuffer():
     """Wait for framebuffer device to be available."""
     while not os.path.exists('/dev/fb0'):
