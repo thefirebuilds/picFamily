@@ -10,7 +10,7 @@ LOG_FILE = "/home/pi/picfamily_debug.log"
 
 # These are the base URLs used to for whether the device is inside my network or not.
 INTERNAL_URL = "http://192.168.86.167:3000"
-EXTERNAL_URL = "http://184.92.108.105:3000"
+EXTERNAL_URL = "http://72.183.150.63:3000"
 
 def log_message(message):
     """Log messages to the log file."""
