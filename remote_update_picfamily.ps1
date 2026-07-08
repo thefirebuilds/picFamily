@@ -1,17 +1,17 @@
 param(
-    [Parameter(Mandatory = $true)]
     [string]$HostName,
 
     [string]$User = "pi",
 
     [switch]$RestartClient,
 
-    [switch]$Reboot
+    [switch]$Reboot,
+
+    [switch]$NoPause
 )
 
 $ErrorActionPreference = "Stop"
-
-$target = "$User@$HostName"
+$script:ExitCode = 0
 
 function Require-Command {
     param([string]$Name)
@@ -21,12 +21,29 @@ function Require-Command {
     }
 }
 
-Require-Command ssh
+function Pause-BeforeExit {
+    if (-not $NoPause.IsPresent) {
+        Write-Host ""
+        Read-Host "Press Enter to close this window"
+    }
+}
 
-$restartClientValue = if ($RestartClient.IsPresent) { "1" } else { "0" }
-$rebootValue = if ($Reboot.IsPresent) { "1" } else { "0" }
+try {
+    if ([string]::IsNullOrWhiteSpace($HostName)) {
+        $HostName = Read-Host "Enter the frame IP address or hostname"
+    }
 
-$remoteScript = @"
+    if ([string]::IsNullOrWhiteSpace($HostName)) {
+        throw "No host was provided."
+    }
+
+    Require-Command ssh
+
+    $target = "$User@$HostName"
+    $restartClientValue = if ($RestartClient.IsPresent) { "1" } else { "0" }
+    $rebootValue = if ($Reboot.IsPresent) { "1" } else { "0" }
+
+    $remoteScript = @"
 set -e
 
 RESTART_CLIENT="$restartClientValue"
@@ -67,7 +84,22 @@ fi
 echo "[picFamily] Remote update complete."
 "@
 
-Write-Host "Connecting to $target..."
-Write-Host "If prompted, enter the Raspberry Pi password. The password will not show while typing."
+    Write-Host "Connecting to $target..."
+    Write-Host "If prompted, enter the Raspberry Pi password. The password will not show while typing."
 
-$remoteScript | ssh $target "bash -s"
+    $remoteScript | ssh $target "bash -s"
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "SSH command failed with exit code $LASTEXITCODE."
+    }
+}
+catch {
+    Write-Host ""
+    Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
+    $script:ExitCode = 1
+}
+finally {
+    Pause-BeforeExit
+}
+
+exit $script:ExitCode

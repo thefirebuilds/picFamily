@@ -60,6 +60,8 @@ The script preserves unrelated root crontab entries, removes older picFamily boo
 
 Use `remote_update_picfamily.ps1` when you know the frame IP address or hostname and want to repair it from your own computer without opening an interactive SSH session.
 
+If you double-click the script, it will ask for the frame IP address or hostname and pause before closing so you can read the result.
+
 From this repository folder on a Windows workstation, run:
 
 ```powershell
@@ -94,6 +96,12 @@ To update the scripts and reboot the device:
 
 ```powershell
 .\remote_update_picfamily.ps1 -HostName 192.168.86.42 -Reboot
+```
+
+For automation, add `-NoPause` so the PowerShell window does not wait for Enter:
+
+```powershell
+.\remote_update_picfamily.ps1 -HostName 192.168.86.42 -NoPause
 ```
 
 The workstation must have SSH installed. On Windows, check with:
