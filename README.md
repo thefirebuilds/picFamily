@@ -53,6 +53,168 @@ wget -O /tmp/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/p
 
 The script preserves unrelated root crontab entries, removes older picFamily boot entries, writes the managed picFamily cron block, and logs to `/home/pi/update_crontab.log`.
 
+## Manual Recovery When Cron Fails
+
+Use this when a frame is online but did not update itself at boot. These steps are meant for someone who is not comfortable editing crontab by hand.
+
+### 1. Install or Open an SSH Client
+
+On Windows 10 or Windows 11:
+
+1. Open PowerShell.
+2. Check whether SSH is already installed:
+
+```powershell
+ssh -V
+```
+
+3. If PowerShell says `ssh` is not recognized, install OpenSSH Client:
+
+```powershell
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+```
+
+If that install command fails, open Windows Settings, search for `Optional Features`, choose `Add an optional feature`, install `OpenSSH Client`, then reopen PowerShell.
+
+On macOS or Linux, open Terminal. SSH is normally already installed.
+
+### 2. Get the Device IP Address
+
+Use the local IP address shown on the picture frame screen if the device is displaying one. It will usually look like one of these:
+
+```text
+192.168.1.25
+192.168.86.42
+10.0.0.18
+```
+
+If the IP is not visible on the screen, check the Wi-Fi router or mesh app for a connected Raspberry Pi device. Common hostnames may include `raspberrypi` or a name you assigned during setup.
+
+You can also try the hostname from your computer:
+
+```bash
+ssh pi@raspberrypi.local
+```
+
+If that works, you do not need the numeric IP.
+
+### 3. Log In to the Device
+
+From PowerShell or Terminal, connect with the IP address:
+
+```bash
+ssh pi@DEVICE_IP
+```
+
+Example:
+
+```bash
+ssh pi@192.168.86.42
+```
+
+If this is the first time connecting, SSH may ask whether to trust the device. Type:
+
+```text
+yes
+```
+
+Then enter the Raspberry Pi password. The password will not show while typing.
+
+### 4. Move to the Scripts Directory
+
+After logging in:
+
+```bash
+cd /home/pi/scripts
+pwd
+ls -la
+```
+
+`pwd` should print:
+
+```text
+/home/pi/scripts
+```
+
+### 5. Manually Download the Current Files
+
+Run these commands on the Raspberry Pi:
+
+```bash
+wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh
+wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh
+wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py
+chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py
+```
+
+### 6. Repair the Crontab
+
+Run:
+
+```bash
+sudo bash /home/pi/scripts/update_crontab.sh
+```
+
+Confirm the output includes this managed block:
+
+```cron
+# BEGIN picFamily managed cron
+@reboot /home/pi/scripts/start_picfamily.sh >> /home/pi/cron_output.log 2>&1
+0 2 * * 0 /sbin/reboot
+# END picFamily managed cron
+```
+
+You can check it again with:
+
+```bash
+sudo crontab -l
+```
+
+### 7. Restart the Client Without Rebooting
+
+If you want the new code to run immediately:
+
+```bash
+sudo pkill -f picFamily.py || true
+sudo pkill fim || true
+sudo /home/pi/scripts/start_picfamily.sh
+```
+
+That command stays attached to the SSH session because it starts the picture frame client. To leave it running after you disconnect, use:
+
+```bash
+sudo nohup /home/pi/scripts/start_picfamily.sh >> /home/pi/cron_output.log 2>&1 &
+```
+
+Or simply reboot:
+
+```bash
+sudo reboot
+```
+
+### 8. Check Logs
+
+Useful commands:
+
+```bash
+tail -n 80 /home/pi/update_crontab.log
+tail -n 80 /home/pi/cron_output.log
+tail -n 80 /home/pi/cron.log
+tail -n 80 /home/pi/picfamily_debug.log
+```
+
+To confirm the endpoint works from the Pi:
+
+```bash
+wget -q -O - https://picfamily.blaketex.com/settings
+```
+
+To confirm the downloaded client uses the current public URL:
+
+```bash
+grep BASE_URL /home/pi/scripts/picFamily.py
+```
+
 ## Logs
 
 - `/home/pi/setup_log.txt` records full installer activity.
