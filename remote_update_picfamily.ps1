@@ -55,13 +55,23 @@ PICFAMILY_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/he
 
 echo "[picFamily] Connected to `$(hostname) as `$(whoami)"
 echo "[picFamily] Ensuring scripts directory exists..."
-mkdir -p "`$SCRIPTS_DIR"
+sudo mkdir -p "`$SCRIPTS_DIR"
+
+download_and_install() {
+    url="`$1"
+    destination="`$2"
+    temp_file="`$(mktemp)"
+
+    echo "[picFamily] Downloading `$destination..."
+    wget -O "`$temp_file" "`$url"
+    sudo install -m 755 "`$temp_file" "`$destination"
+    rm -f "`$temp_file"
+}
 
 echo "[picFamily] Downloading current scripts..."
-wget -O "`$SCRIPTS_DIR/install.sh" "`$INSTALL_URL"
-wget -O "`$SCRIPTS_DIR/update_crontab.sh" "`$UPDATE_CRONTAB_URL"
-wget -O "`$SCRIPTS_DIR/picFamily.py" "`$PICFAMILY_URL"
-chmod +x "`$SCRIPTS_DIR/install.sh" "`$SCRIPTS_DIR/update_crontab.sh" "`$SCRIPTS_DIR/picFamily.py"
+download_and_install "`$INSTALL_URL" "`$SCRIPTS_DIR/install.sh"
+download_and_install "`$UPDATE_CRONTAB_URL" "`$SCRIPTS_DIR/update_crontab.sh"
+download_and_install "`$PICFAMILY_URL" "`$SCRIPTS_DIR/picFamily.py"
 
 echo "[picFamily] Updating root crontab..."
 sudo bash "`$SCRIPTS_DIR/update_crontab.sh"
@@ -88,9 +98,11 @@ echo "[picFamily] Remote update complete."
     Write-Host "If prompted, enter the Raspberry Pi password. The password will not show while typing."
 
     $remoteScript | ssh $target "bash -s"
+    $sshSucceeded = $?
+    $sshExitCode = $LASTEXITCODE
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "SSH command failed with exit code $LASTEXITCODE."
+    if ((-not $sshSucceeded) -or ($sshExitCode -ne 0)) {
+        throw "SSH command failed with exit code $sshExitCode."
     }
 }
 catch {
