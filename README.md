@@ -7,6 +7,7 @@ picFamily is a Raspberry Pi digital picture frame client. On boot, the device do
 - `picFamily.py` is the runtime client that fetches settings, downloads the selected image, and displays it.
 - `install.sh` performs first-time device setup, installs packages, writes the startup script, updates the root crontab, and reboots.
 - `update_crontab.sh` is a remote-friendly repair script for updating the managed crontab and startup script without rerunning the full installer.
+- `remote_update_picfamily.ps1` runs the repair flow from a workstation over SSH, so the operator does not need to manually log in to the Pi.
 - `cleanup.sh` removes local logs and downloaded image files.
 
 ## Service Endpoints
@@ -54,6 +55,67 @@ wget -O /tmp/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/p
 ```
 
 The script preserves unrelated root crontab entries, removes older picFamily boot entries, writes the managed picFamily cron block, and logs to `/home/pi/update_crontab.log`.
+
+## Updating From a Workstation
+
+Use `remote_update_picfamily.ps1` when you know the frame IP address or hostname and want to repair it from your own computer without opening an interactive SSH session.
+
+From this repository folder on a Windows workstation, run:
+
+```powershell
+.\remote_update_picfamily.ps1 -HostName DEVICE_IP
+```
+
+If this repository is not already on the workstation, download the helper first:
+
+```powershell
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/remote_update_picfamily.ps1 -OutFile remote_update_picfamily.ps1
+```
+
+Example:
+
+```powershell
+.\remote_update_picfamily.ps1 -HostName 192.168.86.42
+```
+
+The script connects as the `pi` user by default. To use a different user:
+
+```powershell
+.\remote_update_picfamily.ps1 -HostName 192.168.86.42 -User blake
+```
+
+To update the scripts and restart the picture frame client without rebooting:
+
+```powershell
+.\remote_update_picfamily.ps1 -HostName 192.168.86.42 -RestartClient
+```
+
+To update the scripts and reboot the device:
+
+```powershell
+.\remote_update_picfamily.ps1 -HostName 192.168.86.42 -Reboot
+```
+
+The workstation must have SSH installed. On Windows, check with:
+
+```powershell
+ssh -V
+```
+
+If SSH is missing, install OpenSSH Client:
+
+```powershell
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+```
+
+The remote helper performs these actions on the Pi:
+
+1. Creates `/home/pi/scripts` if needed.
+2. Downloads the current `install.sh`, `update_crontab.sh`, and `picFamily.py`.
+3. Marks those files executable.
+4. Runs `sudo bash /home/pi/scripts/update_crontab.sh`.
+5. Prints the resulting root crontab.
+6. Optionally restarts the client or reboots the device.
 
 ## Manual Recovery When Cron Fails
 
