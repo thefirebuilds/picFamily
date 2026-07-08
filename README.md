@@ -28,11 +28,13 @@ Known endpoints:
 The managed root crontab runs:
 
 ```cron
-@reboot /home/pi/scripts/start_picfamily.sh >> /home/pi/cron_output.log 2>&1
+# BEGIN picFamily managed cron
+@reboot /bin/bash -lc 'sleep 30; until /usr/bin/wget -q --spider https://picfamily.blaketex.com/settings; do sleep 10; done; /usr/bin/wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh && /usr/bin/wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh && /usr/bin/wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py && /bin/chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py && exec /usr/bin/python3 /home/pi/scripts/picFamily.py' >> /home/pi/cron_output.log 2>&1
 0 2 * * 0 /sbin/reboot
+# END picFamily managed cron
 ```
 
-`start_picfamily.sh` does the boot work in order:
+The `@reboot` command does the boot work in order:
 
 1. Waits 30 seconds for boot networking to settle.
 2. Waits until `https://picfamily.blaketex.com/settings` is reachable.
@@ -159,7 +161,7 @@ Confirm the output includes this managed block:
 
 ```cron
 # BEGIN picFamily managed cron
-@reboot /home/pi/scripts/start_picfamily.sh >> /home/pi/cron_output.log 2>&1
+@reboot /bin/bash -lc 'sleep 30; until /usr/bin/wget -q --spider https://picfamily.blaketex.com/settings; do sleep 10; done; /usr/bin/wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh && /usr/bin/wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh && /usr/bin/wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py && /bin/chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py && exec /usr/bin/python3 /home/pi/scripts/picFamily.py' >> /home/pi/cron_output.log 2>&1
 0 2 * * 0 /sbin/reboot
 # END picFamily managed cron
 ```

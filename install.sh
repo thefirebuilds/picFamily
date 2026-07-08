@@ -145,8 +145,12 @@ update_crontab() {
     sudo chmod 666 /home/pi/cron_output.log
 
     # Create a new sudo crontab file
-    echo "@reboot /home/pi/scripts/start_picfamily.sh >> /home/pi/cron_output.log 2>&1" > /tmp/new_cron
-    echo "0 2 * * 0 /sbin/reboot" >> /tmp/new_cron
+    cat > /tmp/new_cron <<'EOF'
+# BEGIN picFamily managed cron
+@reboot /bin/bash -lc 'sleep 30; until /usr/bin/wget -q --spider https://picfamily.blaketex.com/settings; do sleep 10; done; /usr/bin/wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh && /usr/bin/wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh && /usr/bin/wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py && /bin/chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py && exec /usr/bin/python3 /home/pi/scripts/picFamily.py' >> /home/pi/cron_output.log 2>&1
+0 2 * * 0 /sbin/reboot
+# END picFamily managed cron
+EOF
 
     # Load the new crontab file into sudo crontab
     sudo crontab /tmp/new_cron
