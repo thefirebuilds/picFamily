@@ -8,9 +8,9 @@ from datetime import datetime
 BASE_PATH = "/home/pi"
 LOG_FILE = "/home/pi/picfamily_debug.log"
 
-# These are the base URLs used to for whether the device is inside my network or not.
-INTERNAL_URL = "http://192.168.86.167:3000"
-EXTERNAL_URL = "http://72.183.150.63:3000"
+# Canonical app URL. DNS resolves this host both inside and outside the local
+# network, so the client no longer needs to choose between LAN/WAN addresses.
+BASE_URL = "https://picfamily.blaketex.com"
 
 def log_message(message):
     """Log messages to the log file."""
@@ -43,29 +43,6 @@ def sync_device_time():
         log_message("Failed to synchronize time.")
         return False
 
-def is_inside_local_network():
-    """Determine if the device is inside the local network based on JSON response from known IPs."""
-    urls = {
-        "local": f"{INTERNAL_URL}/settings",
-        "external": f"{EXTERNAL_URL}/settings"
-    }
-    
-    for network, url in urls.items():
-        try:
-            print(f"Trying to reach {network} URL: {url}")  # Console log
-            response = requests.get(url, timeout=2)
-            if response.headers.get("Content-Type", "").startswith("application/json"):
-                log_message(f"Device is on the {network} network (URL: {url}).")
-                print(f"✓ Device is on the {network} network (URL: {url})")  # Console log
-                return network == "local"
-        except requests.RequestException as e:
-            log_message(f"Could not reach {url}: {e}")
-            print(f"✗ Could not reach {network} URL: {url} -- {e}")  # Console log
-
-    log_message("Unable to determine network status.")
-    print("⚠️  Unable to determine network status.")  # Console log
-    return None
-    
 def wait_for_framebuffer():
     """Wait for framebuffer device to be available."""
     while not os.path.exists('/dev/fb0'):
@@ -227,8 +204,6 @@ def main():
         log_message("Failed to sync time. Retrying...")
         time.sleep(5)
 
-    global BASE_URL
-    BASE_URL = INTERNAL_URL if is_inside_local_network() else EXTERNAL_URL
     log_message(f"Using BASE_URL: {BASE_URL}")
 
     wait_for_framebuffer()
