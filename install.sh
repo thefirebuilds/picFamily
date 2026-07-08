@@ -77,6 +77,7 @@ create_startup_script() {
 
 LOGFILE="/home/pi/cron.log"
 INSTALL_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh"
+UPDATE_CRONTAB_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh"
 PICFAMILY_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py"
 SETTINGS_URL="https://picfamily.blaketex.com/settings"
 
@@ -112,6 +113,7 @@ until /usr/bin/wget -q --spider "$SETTINGS_URL"; do
 done
 
 download_latest "$INSTALL_URL" "/home/pi/scripts/install.sh"
+download_latest "$UPDATE_CRONTAB_URL" "/home/pi/scripts/update_crontab.sh"
 download_latest "$PICFAMILY_URL" "/home/pi/scripts/picFamily.py"
 
 if [ ! -f /home/pi/scripts/picFamily.py ]; then

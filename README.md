@@ -37,8 +37,9 @@ The managed root crontab runs:
 1. Waits 30 seconds for boot networking to settle.
 2. Waits until `https://picfamily.blaketex.com/settings` is reachable.
 3. Downloads the current `install.sh` to `/home/pi/scripts/install.sh`.
-4. Downloads the current `picFamily.py` to `/home/pi/scripts/picFamily.py`.
-5. Starts the client with `/usr/bin/python3 /home/pi/scripts/picFamily.py`.
+4. Downloads the current `update_crontab.sh` to `/home/pi/scripts/update_crontab.sh`.
+5. Downloads the current `picFamily.py` to `/home/pi/scripts/picFamily.py`.
+6. Starts the client with `/usr/bin/python3 /home/pi/scripts/picFamily.py`.
 
 This keeps devices current when `picFamily.py` changes on GitHub and avoids racing separate `@reboot` cron entries.
 
