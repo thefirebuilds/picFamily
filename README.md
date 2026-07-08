@@ -8,6 +8,7 @@ picFamily is a Raspberry Pi digital picture frame client. On boot, the device do
 - `install.sh` performs first-time device setup, installs packages, writes the startup script, updates the root crontab, and reboots.
 - `update_crontab.sh` is a remote-friendly repair script for updating the managed crontab and startup script without rerunning the full installer.
 - `remote_update_picfamily.ps1` runs the repair flow from a workstation over SSH, so the operator does not need to manually log in to the Pi.
+- `run_remote_update_picfamily.cmd` launches the PowerShell helper on Windows and keeps the window open so the operator can read the result.
 - `cleanup.sh` removes local logs and downloaded image files.
 
 ## Service Endpoints
@@ -60,7 +61,13 @@ The script preserves unrelated root crontab entries, removes older picFamily boo
 
 Use `remote_update_picfamily.ps1` when you know the frame IP address or hostname and want to repair it from your own computer without opening an interactive SSH session.
 
-If you double-click the script, it will ask for the frame IP address or hostname and pause before closing so you can read the result.
+On Windows, the easiest path is to double-click:
+
+```text
+run_remote_update_picfamily.cmd
+```
+
+That launcher opens PowerShell, runs `remote_update_picfamily.ps1`, asks for the frame IP address or hostname, and keeps the window open so you can read the result. Use the `.cmd` launcher instead of right-clicking the `.ps1` file with `Open with PowerShell`, because Windows may close that PowerShell window before you can see the output.
 
 From this repository folder on a Windows workstation, run:
 
@@ -72,6 +79,7 @@ If this repository is not already on the workstation, download the helper first:
 
 ```powershell
 Invoke-WebRequest -Uri https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/remote_update_picfamily.ps1 -OutFile remote_update_picfamily.ps1
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/run_remote_update_picfamily.cmd -OutFile run_remote_update_picfamily.cmd
 ```
 
 Example:
