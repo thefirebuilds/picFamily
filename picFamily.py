@@ -117,11 +117,20 @@ def check_and_download_image(file_name):
         log_message(f"Downloading {file_name} from {image_url}...")
         response = requests.get(image_url, stream=True, timeout=60)
         if response.status_code == 200:
+            content_type = response.headers.get("Content-Type", "unknown")
+            content_length = response.headers.get("Content-Length", "unknown")
+            log_message(f"Image response headers: Content-Type={content_type}, Content-Length={content_length}")
             with open(file_path, "wb") as file:
                 for chunk in response.iter_content(chunk_size=1024):
                     if chunk:
                         file.write(chunk)
-            log_message(f"File {file_name} downloaded successfully to {file_path}.")
+
+            downloaded_size = os.path.getsize(file_path)
+            if downloaded_size <= 0:
+                log_message(f"Downloaded file {file_path} is empty.")
+                return None
+
+            log_message(f"File {file_name} downloaded successfully to {file_path} ({downloaded_size} bytes).")
             return file_path
         else:
             log_message(f"Failed to download the file. HTTP Status Code: {response.status_code}")
@@ -166,24 +175,43 @@ def display_image(local_image_path):
     terminate_fim_processes()
 
     try:
-        subprocess.run(["sudo", "setterm", "-term", "linux", "-foreground", "black", "-clear", "all", ">", "/dev/tty1"])
-        subprocess.run(["sudo", "dmesg", "-n", "1"])
+        if os.path.exists(local_image_path):
+            file_stat = os.stat(local_image_path)
+            log_message(f"Display candidate exists: {local_image_path} ({file_stat.st_size} bytes).")
+        else:
+            log_message(f"Display candidate missing: {local_image_path}")
+            return
+
+        setterm_result = subprocess.run(
+            ["sudo", "setterm", "-term", "linux", "-foreground", "black", "-clear", "all"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        if setterm_result.returncode != 0:
+            log_message(f"setterm failed: {setterm_result.stderr.strip()}")
+
+        dmesg_result = subprocess.run(["sudo", "dmesg", "-n", "1"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if dmesg_result.returncode != 0:
+            log_message(f"dmesg level command failed: {dmesg_result.stderr.strip()}")
 
         log_message(f"Attempting to display image: {local_image_path}")
-        # Use subprocess.Popen with timeout to avoid blocking
         process = subprocess.Popen(
             ["sudo", "fim", "-a", "-q", "-T", "1", "-d", "/dev/fb0", local_image_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
         )
-        log_message(f"Image displayed successfully: {local_image_path}")
+
+        time.sleep(3)
+        if process.poll() is None:
+            log_message(f"fim is running; image should be displayed: {local_image_path}")
+        else:
+            stdout, stderr = process.communicate()
+            log_message(f"fim exited early with code {process.returncode}. stdout={stdout.strip()} stderr={stderr.strip()}")
+            return
 
         hide_cursor()
-
-        # Optionally, wait for a short time to ensure the process is started, then return
-        process.wait(timeout=5)  # Wait for 5 seconds max
-        log_message("fim process completed or timed out.")
 
     except subprocess.TimeoutExpired:
         log_message(f"FIM process timed out while displaying: {local_image_path}")

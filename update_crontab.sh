@@ -37,6 +37,7 @@ LOGFILE="/home/pi/cron_output.log"
 INSTALL_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh"
 UPDATE_CRONTAB_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh"
 PICFAMILY_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py"
+DIAGNOSE_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/diagnose_picfamily.sh"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOGFILE"
@@ -76,8 +77,9 @@ sleep 30
 download_latest "$INSTALL_URL" "/home/pi/scripts/install.sh" || true
 download_latest "$UPDATE_CRONTAB_URL" "/home/pi/scripts/update_crontab.sh" || true
 download_latest "$PICFAMILY_URL" "/home/pi/scripts/picFamily.py" || true
+download_latest "$DIAGNOSE_URL" "/home/pi/scripts/diagnose_picfamily.sh" || true
 
-ls -l /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py 2>/dev/null | while read -r line; do
+ls -l /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py /home/pi/scripts/diagnose_picfamily.sh 2>/dev/null | while read -r line; do
     log "$line"
 done
 
