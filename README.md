@@ -8,7 +8,7 @@ picFamily is a Raspberry Pi digital picture frame client. On boot, the device do
 - `install.sh` performs first-time device setup, installs packages, writes the startup script, updates the root crontab, and reboots.
 - `update_crontab.sh` is a remote-friendly repair script for updating the managed crontab and startup script without rerunning the full installer.
 - `remote_update_picfamily.ps1` runs the repair flow from a workstation over SSH, so the operator does not need to manually log in to the Pi.
-- `run_remote_update_picfamily.cmd` launches the PowerShell helper on Windows and keeps the window open so the operator can read the result.
+- `run_remote_update_picfamily.cmd` is the recommended Windows double-click updater. It uses SSH directly and keeps the window open so the operator can read the result.
 - `cleanup.sh` removes local logs and downloaded image files.
 
 ## Service Endpoints
@@ -31,7 +31,7 @@ The managed root crontab runs:
 
 ```cron
 # BEGIN picFamily managed cron
-@reboot /bin/bash -lc 'sleep 30; until /usr/bin/wget -q --spider https://picfamily.blaketex.com/settings; do sleep 10; done; /usr/bin/wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh && /usr/bin/wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh && /usr/bin/wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py && /bin/chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py && exec /usr/bin/python3 /home/pi/scripts/picFamily.py' >> /home/pi/cron_output.log 2>&1
+@reboot /bin/bash -lc 'echo "[$(date +\%Y-\%m-\%dT\%H:\%M:\%S)] picFamily boot update started"; sleep 30; /usr/bin/wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh && /usr/bin/wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh && /usr/bin/wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py && /bin/chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py && /usr/bin/stat -c "updated %n %y" /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py; echo "[$(date +\%Y-\%m-\%dT\%H:\%M:\%S)] starting picFamily.py"; exec /usr/bin/python3 /home/pi/scripts/picFamily.py' >> /home/pi/cron_output.log 2>&1
 0 2 * * 0 /sbin/reboot
 # END picFamily managed cron
 ```
@@ -39,10 +39,10 @@ The managed root crontab runs:
 The `@reboot` command does the boot work in order:
 
 1. Waits 30 seconds for boot networking to settle.
-2. Waits until `https://picfamily.blaketex.com/settings` is reachable.
-3. Downloads the current `install.sh` to `/home/pi/scripts/install.sh`.
-4. Downloads the current `update_crontab.sh` to `/home/pi/scripts/update_crontab.sh`.
-5. Downloads the current `picFamily.py` to `/home/pi/scripts/picFamily.py`.
+2. Downloads the current `install.sh` to `/home/pi/scripts/install.sh`.
+3. Downloads the current `update_crontab.sh` to `/home/pi/scripts/update_crontab.sh`.
+4. Downloads the current `picFamily.py` to `/home/pi/scripts/picFamily.py`.
+5. Logs the updated file timestamps to `/home/pi/cron_output.log`.
 6. Starts the client with `/usr/bin/python3 /home/pi/scripts/picFamily.py`.
 
 This keeps devices current when `picFamily.py` changes on GitHub and avoids racing separate `@reboot` cron entries.
@@ -67,7 +67,7 @@ On Windows, the easiest path is to double-click:
 run_remote_update_picfamily.cmd
 ```
 
-That launcher opens PowerShell, runs `remote_update_picfamily.ps1`, asks for the frame IP address or hostname, and keeps the window open so you can read the result. Use the `.cmd` launcher instead of right-clicking the `.ps1` file with `Open with PowerShell`, because Windows may close that PowerShell window before you can see the output.
+That launcher asks for the frame IP address or hostname, connects over SSH, runs the update, and keeps the window open so you can read the result. Use the `.cmd` launcher instead of right-clicking the `.ps1` file with `Open with PowerShell`, because Windows may close that PowerShell window before you can see the output.
 
 From this repository folder on a Windows workstation, run:
 
@@ -81,6 +81,8 @@ If this repository is not already on the workstation, download the helper first:
 Invoke-WebRequest -Uri https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/remote_update_picfamily.ps1 -OutFile remote_update_picfamily.ps1
 Invoke-WebRequest -Uri https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/run_remote_update_picfamily.cmd -OutFile run_remote_update_picfamily.cmd
 ```
+
+For a non-technical helper on Windows, only `run_remote_update_picfamily.cmd` is required.
 
 Example:
 
@@ -239,7 +241,7 @@ Confirm the output includes this managed block:
 
 ```cron
 # BEGIN picFamily managed cron
-@reboot /bin/bash -lc 'sleep 30; until /usr/bin/wget -q --spider https://picfamily.blaketex.com/settings; do sleep 10; done; /usr/bin/wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh && /usr/bin/wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh && /usr/bin/wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py && /bin/chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py && exec /usr/bin/python3 /home/pi/scripts/picFamily.py' >> /home/pi/cron_output.log 2>&1
+@reboot /bin/bash -lc 'echo "[$(date +\%Y-\%m-\%dT\%H:\%M:\%S)] picFamily boot update started"; sleep 30; /usr/bin/wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh && /usr/bin/wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh && /usr/bin/wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py && /bin/chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py && /usr/bin/stat -c "updated %n %y" /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py; echo "[$(date +\%Y-\%m-\%dT\%H:\%M:\%S)] starting picFamily.py"; exec /usr/bin/python3 /home/pi/scripts/picFamily.py' >> /home/pi/cron_output.log 2>&1
 0 2 * * 0 /sbin/reboot
 # END picFamily managed cron
 ```
