@@ -33,11 +33,10 @@ create_startup_script() {
     cat > "$STARTUP_SCRIPT" <<'EOF'
 #!/bin/bash
 
-LOGFILE="/home/pi/cron.log"
+LOGFILE="/home/pi/cron_output.log"
 INSTALL_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh"
 UPDATE_CRONTAB_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh"
 PICFAMILY_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py"
-SETTINGS_URL="https://picfamily.blaketex.com/settings"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOGFILE"
@@ -46,33 +45,41 @@ log() {
 download_latest() {
     url="$1"
     destination="$2"
-    temp_file="$(mktemp)"
+    attempts=0
 
-    if /usr/bin/wget -q -O "$temp_file" "$url"; then
-        mv "$temp_file" "$destination"
-        chmod +x "$destination"
-        log "Updated $destination"
-        return 0
-    fi
+    while [ "$attempts" -lt 18 ]; do
+        attempts=$((attempts + 1))
+        temp_file="$(mktemp)"
 
-    rm -f "$temp_file"
-    log "Failed to update $destination from $url"
+        log "Downloading $destination from $url (attempt $attempts)..."
+        if /usr/bin/wget -O "$temp_file" "$url"; then
+            install -m 755 "$temp_file" "$destination"
+            rm -f "$temp_file"
+            log "Updated $destination"
+            return 0
+        fi
+
+        rm -f "$temp_file"
+        log "Failed to update $destination. Retrying in 10 seconds..."
+        sleep 10
+    done
+
+    log "Giving up on $destination after $attempts attempts."
     return 1
 }
 
-log "Startup script began."
+log "picFamily boot update started."
 
 log "Waiting 30 seconds for boot networking to settle."
 sleep 30
 
-until /usr/bin/wget -q --spider "$SETTINGS_URL"; do
-    log "Network or settings endpoint unavailable. Retrying in 10 seconds..."
-    sleep 10
-done
+download_latest "$INSTALL_URL" "/home/pi/scripts/install.sh" || true
+download_latest "$UPDATE_CRONTAB_URL" "/home/pi/scripts/update_crontab.sh" || true
+download_latest "$PICFAMILY_URL" "/home/pi/scripts/picFamily.py" || true
 
-download_latest "$INSTALL_URL" "/home/pi/scripts/install.sh"
-download_latest "$UPDATE_CRONTAB_URL" "/home/pi/scripts/update_crontab.sh"
-download_latest "$PICFAMILY_URL" "/home/pi/scripts/picFamily.py"
+ls -l /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py 2>/dev/null | while read -r line; do
+    log "$line"
+done
 
 if [ ! -f /home/pi/scripts/picFamily.py ]; then
     log "picFamily.py is missing; cannot start."
@@ -104,7 +111,7 @@ update_root_crontab() {
 
     {
         echo "$MANAGED_BEGIN"
-        echo "@reboot /bin/bash -lc 'echo \"[\$(date +\\%Y-\\%m-\\%dT\\%H:\\%M:\\%S)] picFamily boot update started\"; sleep 30; /usr/bin/wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh && /usr/bin/wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh && /usr/bin/wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py && /bin/chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py && /usr/bin/stat -c \"updated %n %y\" /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py; echo \"[\$(date +\\%Y-\\%m-\\%dT\\%H:\\%M:\\%S)] starting picFamily.py\"; exec /usr/bin/python3 /home/pi/scripts/picFamily.py' >> /home/pi/cron_output.log 2>&1"
+        echo "@reboot $STARTUP_SCRIPT >> /home/pi/cron_output.log 2>&1"
         echo "0 2 * * 0 /sbin/reboot"
         echo "$MANAGED_END"
     } >> "$CRON_NEW"

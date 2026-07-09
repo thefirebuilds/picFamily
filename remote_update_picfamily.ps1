@@ -54,6 +54,12 @@ UPDATE_CRONTAB_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/re
 PICFAMILY_URL="https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py"
 
 echo "[picFamily] Connected to `$(hostname) as `$(whoami)"
+echo "[picFamily] Ensuring runtime packages are installed..."
+if ! dpkg -s python3-requests ca-certificates wget >/dev/null 2>&1; then
+    sudo apt-get update
+    sudo apt-get install -y python3-requests ca-certificates wget
+fi
+
 echo "[picFamily] Ensuring scripts directory exists..."
 sudo mkdir -p "`$SCRIPTS_DIR"
 

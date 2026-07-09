@@ -2,7 +2,9 @@ import os
 import time
 import subprocess
 import requests
+import socket
 from datetime import datetime
+from urllib.parse import quote
 
 # Global constants for paths and URLs
 BASE_PATH = "/home/pi"
@@ -26,11 +28,13 @@ def get_device_ip():
         return None
 
 def check_internet_access():
-    """Check if the device has internet access by pinging Google DNS."""
+    """Check network access without relying on ICMP ping."""
     try:
-        subprocess.check_call(["ping", "-c", "1", "8.8.8.8"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        with socket.create_connection(("picfamily.blaketex.com", 443), timeout=10):
+            pass
         return True
-    except subprocess.CalledProcessError:
+    except OSError as e:
+        log_message(f"Network check failed: {e}")
         return False
 
 def sync_device_time():
@@ -54,11 +58,13 @@ def get_current_pic():
     """Fetch the current image file name from the server."""
     url = f"{BASE_URL}/settings"
     try:
+        log_message(f"Fetching current picture settings from {url}...")
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
         current_pic = data.get("currentPic")
         if current_pic:
+            log_message(f"Current picture from settings: {current_pic}")
             return current_pic
         else:
             raise ValueError("Key 'currentPic' not found in the response.")
@@ -85,12 +91,12 @@ def check_metadata(file_path):
 def check_and_download_image(file_name):
     """Check if the image exists locally, otherwise download it."""
     file_path = os.path.join(BASE_PATH, file_name)
+    image_url = f"{BASE_URL}/images/{quote(file_name)}"
 
     existing_size, existing_mod_time = check_metadata(file_path)
     if existing_size:
-        url = f"{BASE_URL}/images/{file_name}"
         try:
-            response = requests.head(url, timeout=10)
+            response = requests.head(image_url, timeout=10)
             response.raise_for_status()
             remote_size = int(response.headers.get('Content-Length', 0))
             remote_mod_time = response.headers.get('Last-Modified')
@@ -108,12 +114,13 @@ def check_and_download_image(file_name):
 
     # Download file
     try:
-        log_message(f"Downloading {file_name} from {BASE_URL}/images/{file_name}...")
-        response = requests.get(f"{BASE_URL}/images/{file_name}", stream=True)
+        log_message(f"Downloading {file_name} from {image_url}...")
+        response = requests.get(image_url, stream=True, timeout=60)
         if response.status_code == 200:
             with open(file_path, "wb") as file:
                 for chunk in response.iter_content(chunk_size=1024):
-                    file.write(chunk)
+                    if chunk:
+                        file.write(chunk)
             log_message(f"File {file_name} downloaded successfully to {file_path}.")
             return file_path
         else:

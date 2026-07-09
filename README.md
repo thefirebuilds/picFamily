@@ -31,18 +31,18 @@ The managed root crontab runs:
 
 ```cron
 # BEGIN picFamily managed cron
-@reboot /bin/bash -lc 'echo "[$(date +\%Y-\%m-\%dT\%H:\%M:\%S)] picFamily boot update started"; sleep 30; /usr/bin/wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh && /usr/bin/wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh && /usr/bin/wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py && /bin/chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py && /usr/bin/stat -c "updated %n %y" /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py; echo "[$(date +\%Y-\%m-\%dT\%H:\%M:\%S)] starting picFamily.py"; exec /usr/bin/python3 /home/pi/scripts/picFamily.py' >> /home/pi/cron_output.log 2>&1
+@reboot /home/pi/scripts/start_picfamily.sh >> /home/pi/cron_output.log 2>&1
 0 2 * * 0 /sbin/reboot
 # END picFamily managed cron
 ```
 
-The `@reboot` command does the boot work in order:
+`start_picfamily.sh` does the boot work in order:
 
 1. Waits 30 seconds for boot networking to settle.
-2. Downloads the current `install.sh` to `/home/pi/scripts/install.sh`.
-3. Downloads the current `update_crontab.sh` to `/home/pi/scripts/update_crontab.sh`.
-4. Downloads the current `picFamily.py` to `/home/pi/scripts/picFamily.py`.
-5. Logs the updated file timestamps to `/home/pi/cron_output.log`.
+2. Downloads the current `install.sh` to `/home/pi/scripts/install.sh`, retrying for up to 3 minutes.
+3. Downloads the current `update_crontab.sh` to `/home/pi/scripts/update_crontab.sh`, retrying for up to 3 minutes.
+4. Downloads the current `picFamily.py` to `/home/pi/scripts/picFamily.py`, retrying for up to 3 minutes.
+5. Logs the installed file details to `/home/pi/cron_output.log`.
 6. Starts the client with `/usr/bin/python3 /home/pi/scripts/picFamily.py`.
 
 This keeps devices current when `picFamily.py` changes on GitHub and avoids racing separate `@reboot` cron entries.
@@ -129,11 +129,12 @@ Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
 The remote helper performs these actions on the Pi:
 
 1. Creates `/home/pi/scripts` if needed.
-2. Downloads the current `install.sh`, `update_crontab.sh`, and `picFamily.py`.
-3. Marks those files executable.
-4. Runs `sudo bash /home/pi/scripts/update_crontab.sh`.
-5. Prints the resulting root crontab.
-6. Optionally restarts the client or reboots the device.
+2. Installs required runtime packages if missing: `python3-requests`, `ca-certificates`, and `wget`.
+3. Downloads the current `install.sh`, `update_crontab.sh`, and `picFamily.py`.
+4. Marks those files executable.
+5. Runs `sudo bash /home/pi/scripts/update_crontab.sh`.
+6. Prints the resulting root crontab.
+7. Optionally restarts the client or reboots the device.
 
 ## Manual Recovery When Cron Fails
 
@@ -241,7 +242,7 @@ Confirm the output includes this managed block:
 
 ```cron
 # BEGIN picFamily managed cron
-@reboot /bin/bash -lc 'echo "[$(date +\%Y-\%m-\%dT\%H:\%M:\%S)] picFamily boot update started"; sleep 30; /usr/bin/wget -O /home/pi/scripts/install.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/install.sh && /usr/bin/wget -O /home/pi/scripts/update_crontab.sh https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/update_crontab.sh && /usr/bin/wget -O /home/pi/scripts/picFamily.py https://raw.githubusercontent.com/thefirebuilds/picFamily/refs/heads/main/picFamily.py && /bin/chmod +x /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py && /usr/bin/stat -c "updated %n %y" /home/pi/scripts/install.sh /home/pi/scripts/update_crontab.sh /home/pi/scripts/picFamily.py; echo "[$(date +\%Y-\%m-\%dT\%H:\%M:\%S)] starting picFamily.py"; exec /usr/bin/python3 /home/pi/scripts/picFamily.py' >> /home/pi/cron_output.log 2>&1
+@reboot /home/pi/scripts/start_picfamily.sh >> /home/pi/cron_output.log 2>&1
 0 2 * * 0 /sbin/reboot
 # END picFamily managed cron
 ```
